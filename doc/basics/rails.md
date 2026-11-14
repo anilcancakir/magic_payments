@@ -245,9 +245,9 @@ On Play it follows the replacement mode in the table above (`deferred` is `atRen
 <a name="store-refusals"></a>
 ### What the store rail refuses
 
-`purchase` and `restore` refuse, rather than guess, in these cases. Each throws a `BillingException` with a typed code (see [Typed errors](#errors)):
+`purchase` refuses, rather than guesses, in these cases, and `restore` refuses only on identity. Each throws a `BillingException` with a typed code (see [Typed errors](#errors)):
 
-- **Identity.** Nothing was identified (`notIdentified`), or the SDK's `appUserID` is not the id `identify()` bound (`identityMismatch`). A purchase attributed to another account is one the backend cannot give to the right customer.
+- **Identity** (`purchase` and `restore`). Nothing was identified (`notIdentified`), or the SDK's `appUserID` is not the id `identify()` bound (`identityMismatch`). A purchase attributed to another account is one the backend cannot give to the right customer.
 - **The other store sells the subscription** (`managedElsewhere`). The rail reads the store product ids RevenueCat reports active, and a subscription purchase is refused when one of them belongs to the other store (a Play `subscriptionId:basePlanId` on the App Store rail, an App Store id on the Play rail), because a second subscription here would charge the customer twice. A one-off product is still sold beside it.
 - **A Play product no change can be computed against** (`unmappedActiveProduct`). The account holds a Play product that neither the offerings nor `tierOfStoreProduct` rank, a grandfathered product on the subscription being switched, or more than one Play subscription at once.
 
