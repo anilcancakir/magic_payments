@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-15
+
 ### Added
 
 - **`llms.txt`** for agents that read a package from its index. (`llms.txt`)
@@ -16,7 +18,7 @@
 - **The barrel doc comment describes the web rail as billed through your backend.** It no longer names a payment vendor; the package contains no Stripe code. (`lib/magic_payments.dart`)
 - **The `payments_doctor` MCP tool description no longer states how many checks the command runs**, a number that went stale whenever a check was added. (`lib/src/cli/payments_dowel_provider.dart`)
 
-## 1.0.0
+## [1.0.0] - 2026-11-14
 
 ### Changed
 
@@ -25,31 +27,31 @@
 - **The SDK floor is Dart 3.13 and Flutter 3.47.** Inherited from `magic` 1.0.0. (`pubspec.yaml`, `test/pubspec_floors_test.dart`)
 - **Direct dependencies move to their latest releases.** `purchases_flutter` `^10.15.1` to `^11.0.2` (the Dart API this package calls is unchanged; the major raises the Android native floors to Kotlin 2.1 and Play Billing 9), `dowel` `^1.0.0`, `test` `^1.25.0` to `^1.32.0`. (`pubspec.yaml`, `test/pubspec_floors_test.dart`)
 
-## 0.0.12
+## [0.0.12] - 2026-10-14
 
 ### Changed
 
 - **Every sibling floor names this batch's release.** `magic` moves `^0.0.28` to `^0.0.29`; `fluttersdk_artisan` stays at `^0.0.20`. The old range already admitted 0.0.29, so a fresh `pub get` resolves nothing differently; what changes is that the floor names the release this package is verified against. magic 0.0.29 adds two abstract members to `BroadcastChannel` (`isSubscribed`, `onSubscriptionChanged`), which this package does not implement, and a `webOnlyWindowName` named parameter to `LaunchAdapter.launch()`, which only this package's test double implements and which already takes it (#23); wind 1.9.0, which magic 0.0.29 names, makes `tracking-*` em, and this package writes no `tracking-*` class. The bug report template's version placeholders move too. (`pubspec.yaml`, `test/pubspec_floors_test.dart`, `.github/ISSUE_TEMPLATE/bug_report.yml`)
 
-## 0.0.11
+## [0.0.11] - 2026-10-13
 
 ### Changed
 
 - **Every sibling floor names this batch's release.** `magic` moves `^0.0.27` to `^0.0.28` and `fluttersdk_artisan` `^0.0.19` to `^0.0.20`. The old ranges already admitted the new versions, so a fresh `pub get` resolves nothing differently; what changes is that the floors name the releases this package is verified against. Neither magic 0.0.28 nor artisan 0.0.20 is breaking; artisan 0.0.20 makes a connected command that reaches an extension the app has not registered yet print one retry line and exit 75 instead of an RPC stack, and this package calls no extension, so `payments:install` and `payments:doctor` behave as before. The bug report template's version placeholders move too: "Magic Payments Version" had stayed at `0.0.8`. (`pubspec.yaml`, `test/pubspec_floors_test.dart`, `.github/ISSUE_TEMPLATE/bug_report.yml`)
 
-## 0.0.10
+## [0.0.10] - 2026-10-11
 
 ### Added
 
 - **`BillingErrorCode.paymentDeclined` and `BillingErrorCode.paymentRequiresAction`.** A plan change the producer charges at once (magic-starter-laravel 0.0.28: an upgrade or a cycle change) answers `402` with `billing.reason` `payment_failed` or `payment_requires_action` when the card declines or asks for a 3D Secure confirmation, and nothing changes. The web rail's `swap` maps those to the two new codes and keeps the producer's localised sentence as the message; any other 402 stays `unknown`. A caller switching exhaustively on `BillingErrorCode` adds the two cases. (`lib/src/enums/billing_error_code.dart`, `lib/src/drivers/billing_service_web.dart`)
 
-## 0.0.9
+## [0.0.9] - 2026-10-10
 
 ### Added
 
 - **`StoreProductOffer.introEligible`** (default `false`) is `true` only when the store says THIS customer may take the introductory offer, so a caller shows intro copy ("free for 14 days, then ...") only when it is `true`. On the App Store `products()` asks the SDK once for the store product ids that carry an intro price and only a definite `eligible` answer counts (unknown and ineligible stay `false`); on Play it skips the read and treats a present intro price as eligible, since Play only offers what the account may take (not verified against a real account; an offer whose eligibility is developer determined is still returned to a customer who already took a trial, so prefer Play-managed eligibility such as new-customer acquisition for a trial offer). A failed eligibility read is logged and leaves every offer `false`. (`lib/src/models/store_product_offer.dart`, `lib/src/drivers/revenuecat_store_service.dart`, `doc/basics/rails.md`)
 
-## 0.0.8
+## [0.0.8] - 2026-10-09
 
 ### Added
 
@@ -81,19 +83,19 @@
 - **The documentation describes the store rail that ships.** `doc/basics/rails.md` and the installation guide's platform table called the App Store and Play rails "Declared, not implemented"; `RevenueCatStoreService` implements both and `Payments.store` is non-null on iOS and Android. The rails guide also said the store rail refuses a subscription Stripe manages: `managedElsewhere` is raised only for an active product the OTHER store sells, and a Stripe subscription is not among the products RevenueCat reports, so the guide now says to gate the store's purchase affordance on `BillingEntitlement.manageVia`. The `BillingErrorCode.managedElsewhere` doc comment said the same wrong thing and is corrected. (`doc/basics/rails.md`, `doc/getting-started/installation.md`, `lib/src/enums/billing_error_code.dart`)
 - **The bug report form's version placeholders name the right packages.** The Magic Payments field still read `0.0.1`, and the previous release had stamped its own version into the Magic Framework field. (`.github/ISSUE_TEMPLATE/bug_report.yml`)
 
-## 0.0.7
+## [0.0.7] - 2026-09-29
 
 ### Changed
 
 - **Every sibling floor names this batch's release.** `magic` moves `^0.0.22` to `^0.0.24` and `fluttersdk_artisan` `^0.0.16` to `^0.0.17`. The old ranges already admitted the new versions, so a fresh `pub get` resolves nothing differently; what changes is that the floors name the releases this package is verified against. magic 0.0.24 removes `MagicController.onRefreshUI` (BREAKING); this package calls it nowhere in `lib/` or `test/`, so nothing here moves with it. `test/pubspec_floors_test.dart` asserts the new floors. (`pubspec.yaml`, `test/pubspec_floors_test.dart`)
 
-## 0.0.6
+## [0.0.6] - 2026-09-27
 
 ### Fixed
 
 - **An idle `StoreIdentitySync.syncNow()` runs in the caller's zone instead of waiting on another zone's microtask queue.** 0.0.5 chained every sync onto a stored completed future, and a completed future runs its listeners in the zone it was created in: a sync started inside a widget test's fake-async zone (a team switch in `magic_starter`, which awaits the sync) never ran and the switch never returned, once an earlier test had created that future. An idle sync now starts in the caller's own turn; only a sync queued behind one in flight chains, and a `detach()` during an identify still keeps the next sync behind it. (`lib/src/support/store_identity_sync.dart`)
 
-## 0.0.5
+## [0.0.5] - 2026-09-27
 
 ### Added
 
@@ -103,7 +105,7 @@
 
 - **Every sibling floor names this batch's release.** `magic` moves `^0.0.16` to `^0.0.22`; `fluttersdk_artisan` stays at `^0.0.16`, still the newest. The old ranges already admitted the new versions, so a fresh `pub get` resolves nothing differently; what changes is that the floors name the release this package is verified against. `StoreIdentitySync` needs nothing newer than 0.0.16; of magic 0.0.22's BREAKING changes, only `Auth.fake()` dispatching through the real `Event` facade reaches it, from one test, and the suite passes unchanged. (`pubspec.yaml`, `test/pubspec_floors_test.dart`)
 
-## 0.0.4
+## [0.0.4] - 2026-09-22
 
 Dependency floors only; the package code is identical to 0.0.3.
 
@@ -111,7 +113,7 @@ Dependency floors only; the package code is identical to 0.0.3.
 
 - **Every sibling floor names this batch's release.** `magic` moves `^0.0.15` to `^0.0.16`; `fluttersdk_artisan` stays at `^0.0.16`, still the newest. The old ranges already admitted the new versions, so a fresh `pub get` resolves nothing differently; what changes is that the floors name the releases this package is verified against. magic 0.0.16 widens `file_picker` to admit 13, where `PlatformFile.length()` answers null for an unreadable file; this package does not call `Pick`. `test/pubspec_floors_test.dart` pins the new magic floor. (`pubspec.yaml`, `test/pubspec_floors_test.dart`, `README.md`, `doc/getting-started/installation.md`)
 
-## 0.0.3
+## [0.0.3] - 2026-09-21
 
 Dependency floors only; the package code is identical to 0.0.2.
 
@@ -119,7 +121,7 @@ Dependency floors only; the package code is identical to 0.0.2.
 
 - **Every sibling floor names this batch's release.** `magic` moves `^0.0.6` to `^0.0.15` and `fluttersdk_artisan` `^0.0.13` to `^0.0.16`. The old ranges already admitted the new versions, so a fresh `pub get` resolves nothing differently; what changes is that the floors name the releases this package is verified against. magic 0.0.15 is breaking in its database layer (a migration may no longer manage its own transaction, and `DB.transaction` refuses a callback that closes the transaction itself); nothing in this package calls either, so no code here changes, but an app below magic 0.0.15 no longer resolves this release. (`pubspec.yaml`, `test/pubspec_floors_test.dart`)
 
-## 0.0.2
+## [0.0.2] - 2026-08-29
 
 Documentation only; the package code is identical to 0.0.1.
 
@@ -140,7 +142,7 @@ Documentation only; the package code is identical to 0.0.1.
   rail is checked rather than assumed) and the actual install commands, rather
   than a sentence pointing at "your app's config".
 
-## 0.0.1
+## [0.0.1] - 2026-08-25
 
 First release of the package. Everything below is new, so this entry describes
 the shape rather than a diff.
