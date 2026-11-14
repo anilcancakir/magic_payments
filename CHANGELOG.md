@@ -6,6 +6,12 @@
 
 - **The package page is `https://anilcancakir.com/magic/payments` and every documentation link sits under `https://anilcancakir.com/magic/docs/payments`.** The pub.dev page carries it from the next release. (`pubspec.yaml`, `README.md`, `llms.txt`)
 
+### Fixed
+
+- **The docs no longer say `purchase` throws `notIdentified` until the next auth change.** `purchase` and `restore` run `StoreIdentitySync.syncNow()` themselves before they check, so skipping the call after `Magic.init` only delays the identify to the first purchase. `notIdentified` means the `billableId` callback is unset or answers `null` or an empty string. (`README.md`, `llms.txt`, `doc/basics/rails.md`, `skills/magic-payments/SKILL.md`)
+- **The agent skill gates access on `subscribed`, not on `PlanStatus`.** The server derives `subscribed`, and a customer in `pastDue` or `grace` stays subscribed while the rail retries; `PlanStatus` and `isDunning` are for copy only. (`skills/magic-payments/SKILL.md`)
+- **The published `payments_config.stub` describes `subject_label` truthfully.** It is recorded as the `magic_subject` RevenueCat subscriber attribute, not used in log lines. (`assets/stubs/install/payments_config.stub`)
+
 ## [1.0.1] - 2026-11-15
 
 ### Added

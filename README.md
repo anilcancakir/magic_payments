@@ -197,7 +197,7 @@ Switch on `BillingException.code`, a `BillingErrorCode`, never on `message`:
 | Code | Cause |
 |------|-------|
 | `notConfigured` | `payments.revenuecat.public_sdk_key` is blank or absent. Non-null `Payments.store` does not mean configured. |
-| `notIdentified` | No paying account was identified before a `purchase` or `restore`. |
+| `notIdentified` | `StoreIdentitySync.billableId` is unset or answers `null` or an empty string when a `purchase` or `restore` asks. |
 | `identityMismatch` | The SDK is bound to another account than the one asking. |
 | `managedElsewhere` | The other store sells a subscription the customer holds. |
 | `unmappedActiveProduct` | An active Play product cannot be ranked, so no replacement mode is safe. |
@@ -220,7 +220,7 @@ Future<void> wireStore(String? Function() payingId) async {
 }
 ```
 
-`attach()` only adds a listener: it identifies on every `Auth.stateNotifier` change after the call. `Magic.init` has already restored a returning user's session, so call `wireStore` after `await Magic.init(...)` and let `syncNow()` identify that user; without it the store rail stays unidentified and `purchase` throws `notIdentified` until the next auth change. After a switch of the paying subject that does not change auth state, such as a team switch, call `await StoreIdentitySync.syncNow()` again. While `billableId` is unset nothing is identified and every store purchase throws `notIdentified`.
+`attach()` only adds a listener: it identifies on every `Auth.stateNotifier` change after the call. `Magic.init` has already restored a returning user's session, so call `wireStore` after `await Magic.init(...)` and let `syncNow()` identify that user straight away. `purchase` and `restore` run the same sync before they check, so a missed call costs an identify at the first purchase, not a refusal. After a switch of the paying subject that does not change auth state, such as a team switch, call `await StoreIdentitySync.syncNow()` again. `notIdentified` means the `billableId` callback is unset or answers `null` or an empty string: nothing can be identified then, and every store purchase throws it.
 
 ## Command line
 
@@ -243,7 +243,7 @@ Rules for an agent writing code against this package. Each one is a mistake that
 | Branch management screens on `BillingEntitlement.manageVia` | A subscription is managed where its rail sold it, whatever platform the app runs on. Never use `kIsWeb` or `Platform.is*`. |
 | Read `currentEntitlement()` again after `purchase`, `checkout`, `swap` or `cancel` | The backend's answer is the grant; the write's own result is only a hint. |
 | Switch on `BillingException.code` | `message` is prose that differs per rail and locale. |
-| Set `StoreIdentitySync.billableId`, call `attach()`, then `await StoreIdentitySync.syncNow()` before any store purchase | Without a paying subject `purchase` and `restore` throw `notIdentified`. |
+| Set `StoreIdentitySync.billableId` and call `attach()` before any store purchase, then `await StoreIdentitySync.syncNow()` after `Magic.init` | `purchase` and `restore` identify on demand, but throw `notIdentified` when `billableId` is unset or answers `null` or an empty string. |
 | Never put a RevenueCat secret key in `lib/config/payments.dart` | `public_sdk_key` is the public key and ships in the app bundle. |
 | Never render a link to web checkout or the web portal on iOS or Android | App Review Guideline 3.1.3(a) restricts steering a customer to another purchase method. |
 | Show intro-offer copy only when `StoreProductOffer.introEligible` is `true` | An `introPrice` alone says the product has an offer, not that this customer may take it. |

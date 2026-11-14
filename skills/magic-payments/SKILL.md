@@ -34,7 +34,7 @@ Requires Dart >=3.13, Flutter >=3.47, `magic` ^1.0.0 and a backend that serves `
 1. Branch a management screen on `BillingEntitlement.manageVia` (`portal`, `appStore`, `playStore`, `none`). It follows the rail that sold the subscription, so a store case can reach a web build where `Payments.store` is `null`: use `manageUrl` there when it is set, otherwise tell the customer which store manages it. Never end a store case on `Payments.store?.openStoreManagement()`, which does nothing on that build.
 2. Read `currentEntitlement()` again after any write. The backend's answer is the grant; a `true` from `purchase` or a returned `checkout` only says something happened.
 3. `getPlans()` returns each tier's row undecoded as `Map<String, dynamic>`. The product keys `purchase`, `checkout` and `swap` take are the `key` values in a row's `products` list.
-4. Gate access on `PlanStatus` and not on `subscribed` alone: `trialing`, `pastDue` and `grace` still carry access, and `PlanStatus.isDunning` is `true` for `pastDue` and `grace`.
+4. Gate access on `subscribed`, which the server derives and the client never recomputes: a customer in `pastDue` or `grace` stays subscribed while the rail retries, and `PlanStatus` has no `grants()` mirror. Use `PlanStatus` and `PlanStatus.isDunning` (`true` for `pastDue` and `grace`) for copy only, such as a failed-payment banner.
 5. `getPaymentMethod()` reports a rail outage as a `PaymentMethod` with every field null. Gate the copy on `PaymentMethod.available`, not on a null `last4`.
 6. `getInvoices({cursor})` addresses the first page by sending no cursor. Keep `nextCursor` from each page and send it back; do not reuse a stored one on a reset.
 
@@ -57,7 +57,7 @@ Requires Dart >=3.13, Flutter >=3.47, `magic` ^1.0.0 and a backend that serves `
 
 ## StoreIdentitySync rules
 
-1. Set `StoreIdentitySync.billableId` (a `String? Function()`) to the paying subject, a user or a team, call `attach()` once, then `await StoreIdentitySync.syncNow()`, all after `await Magic.init(...)`. `attach()` only adds a listener for later `Auth.stateNotifier` changes, and `Magic.init` already restored a returning user's session, so without the `syncNow()` that user's rail stays unidentified; without `billableId` `purchase` and `restore` throw `notIdentified`.
+1. Set `StoreIdentitySync.billableId` (a `String? Function()`) to the paying subject, a user or a team, call `attach()` once, then `await StoreIdentitySync.syncNow()`, all after `await Magic.init(...)`. `attach()` only adds a listener for later `Auth.stateNotifier` changes, and `Magic.init` already restored a returning user's session, so `syncNow()` is what identifies that user straight away; `purchase` and `restore` run the same sync before they check. `notIdentified` means `billableId` is unset or answers `null` or an empty string.
 2. After a switch of the paying subject that does not change auth state, `await StoreIdentitySync.syncNow()` again. Syncs run one at a time in call order, and the same id twice in a row identifies once.
 3. A `BillingException` from a sync is logged and not thrown, because the login or switch that prompted it already succeeded. Do not call `identify` yourself on top of the sync, and never call `recordBinding`: it is `@internal`.
 

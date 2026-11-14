@@ -42,8 +42,10 @@ Map<String, dynamic> get paymentsConfig => {
         _ => '',
       },
 
-      // What the App User ID identifies, used in log lines so a support ticket
-      // reads "team 42" rather than a bare id. Optional.
+      // What the App User ID identifies. When set and non-empty, identify()
+      // records "<label>:<id>" as the `magic_subject` RevenueCat subscriber
+      // attribute, so a support ticket reads "team:42" rather than a bare id.
+      // Optional.
       'subject_label': 'team',
     },
   },
