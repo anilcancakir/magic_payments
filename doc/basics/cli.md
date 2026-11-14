@@ -1,76 +1,80 @@
 # CLI Reference
 
-## Table of Contents
+`magic_payments` adds `payments:install` to scaffold, `payments:configure` to change a value afterwards and `payments:doctor` to report on a project to `dowel`.
 
-- <a name="toc-overview"></a>[Overview](#overview)
-- <a name="toc-install"></a>[install](#install)
-- <a name="toc-configure"></a>[configure](#configure)
-- <a name="toc-doctor"></a>[doctor](#doctor)
-- <a name="toc-mcp"></a>[MCP Exposure](#mcp)
+- [Quick Reference](#quick-reference)
+- [Overview](#overview)
+- [install](#install)
+- [configure](#configure)
+- [doctor](#doctor)
+- [MCP Exposure](#mcp)
+- [Gotchas](#gotchas)
+- [Related Documentation](#related-documentation)
 
----
+<a name="quick-reference"></a>
+## Quick Reference
 
-## <a name="overview"></a>Overview
+| Command | Flags | Writes files |
+|:--------|:------|:-------------|
+| `payments:install` | `--dry-run`, `--force` | Yes: the config, `lib/config/app.dart`, `lib/main.dart` |
+| `payments:configure` | `--show`, `--driver=<mode>` | Yes: the `driver` value in `lib/config/payments.dart` |
+| `payments:doctor` | `--verbose`, `--json` | No |
 
-Magic Payments ships a CLI on top of `dowel`, the same substrate `magic_notifications`
-and `magic_social_auth` use. Every command runs through:
+<a name="overview"></a>
+## Overview
 
-```bash
-dart run magic_payments <command> [options]
-```
-
-`lib/cli.dart` is a separate entry point from `lib/magic_payments.dart` deliberately, so an app that
-never touches the CLI does not pay for the command tree in its runtime build; it imports nothing from
-Flutter or `dart:ui`.
-
-> [!NOTE]
-> Run any command with `--help` for the authoritative set of flags rather than relying on this page
-> for flag names.
-
----
-
-## <a name="install"></a>install
-
-Sets up the package in a consuming app: creating the config file, registering
-`PaymentsServiceProvider` and wiring the config factory into `main.dart`, the same shape as
-`magic_notifications install`.
+Every command runs through `dowel`:
 
 ```bash
-dart run magic_payments install
+dart run magic:dowel payments:doctor
 ```
 
-Safe to run more than once: a second run is idempotent and changes nothing it has already put in
-place.
-
----
-
-## <a name="configure"></a>configure
-
-Reads or updates individual settings without re-running the full install step.
+The `payments:*` commands exist once `dowel` has registered the plugin's provider, which is what `plugin:install` does:
 
 ```bash
-dart run magic_payments configure [options]
+flutter pub add magic_payments
+dart run magic:dowel plugin:install magic_payments
 ```
 
-As of this version, `payments.*` defines no keys of its own (see
-[Configuration](../getting-started/configuration.md)), so `configure` has little to configure yet.
-Expect this command's surface to grow alongside the store rail.
+`lib/cli.dart` is a separate entry point from `lib/magic_payments.dart` deliberately, so an app that never touches the CLI does not pay for the command tree in its runtime build; nothing under it imports Flutter or `dart:ui`.
 
----
+<a name="install"></a>
+## install
 
-## <a name="doctor"></a>doctor
-
-A health check over the plugin's installation and configuration state, in the same spirit as
-`magic_notifications doctor`: it validates what is present rather than mutating anything.
+Sets up the package in a consuming app: it publishes `lib/config/payments.dart`, registers `PaymentsServiceProvider` in `lib/config/app.dart` and wires `paymentsConfig` into `configFactories` in `lib/main.dart`. The whole plan is the bundled `install.yaml`; the command has nothing of its own to add.
 
 ```bash
-dart run magic_payments doctor
-dart run magic_payments doctor --verbose
-dart run magic_payments doctor --json
+dart run magic:dowel payments:install
+dart run magic:dowel payments:install --dry-run
+dart run magic:dowel payments:install --force
 ```
 
-Five checks, each of which reads a file in your project and can come back false, then the config
-state it actually read:
+`--dry-run` stages the operations and writes nothing. Running it again converges on the same edits instead of duplicating them. A config file you edited by hand no longer matches the install record, so the run is refused and lists the files; `--force` overwrites them, and is your decision rather than a default.
+
+<a name="configure"></a>
+## configure
+
+Reads or changes the one value the published config carries, without going near the installer, so a hand-edited file is never treated as a conflict.
+
+```bash
+dart run magic:dowel payments:configure --show
+dart run magic:dowel payments:configure --driver=platform
+```
+
+`--driver` accepts `platform` and nothing else; any other value exits 1 and writes nothing, because the runtime would log an error about it and ignore it. A driver of your own is registered in code with `Payments.extend(role, factory)` (see [Payments Manager](../architecture/payments-manager.md)). The command refuses when `lib/config/payments.dart` does not exist and points you at `payments:install`.
+
+<a name="doctor"></a>
+## doctor
+
+A read-only health check over the installation and configuration state. It validates what is on disk and mutates nothing.
+
+```bash
+dart run magic:dowel payments:doctor
+dart run magic:dowel payments:doctor --verbose
+dart run magic:dowel payments:doctor --json
+```
+
+Each line of the report reads a file in your project and can come back false, then the config state it actually read:
 
 ```
 Magic Payments, doctor report
@@ -91,13 +95,11 @@ Config state:
 ✓ Every check passed.
 ```
 
-`--verbose` adds the path and the requirement behind each check, so a false line names the file to
-open rather than leaving you to guess which of the five it meant.
+The command exits 0 when every check passes and 1 otherwise. `--verbose` adds the path and the requirement behind each line, so a false line names the file to open.
 
-### <a name="doctor-json"></a>`--json`: the report for an agent
+### `--json`: the report for an agent
 
-`--json` prints exactly one JSON object and nothing else (no banner, no prose), and exits with the
-same code as the human report: 0 when nothing is an `error`, 1 otherwise.
+`--json` prints exactly one JSON object and nothing else (no banner, no prose), and exits with the same code as the human report: 0 when no check is an `error`, 1 otherwise.
 
 ```json
 {
@@ -111,7 +113,7 @@ same code as the human report: 0 when nothing is an `error`, 1 otherwise.
 ```
 
 | `id` | What it reads |
-|------|---------------|
+|:-----|:--------------|
 | `dependency_declared` | `pubspec.yaml` lists `magic_payments` |
 | `dependency_resolved` | `.dart_tool/package_config.json` carries it |
 | `config_published` | `lib/config/payments.dart` exists |
@@ -120,59 +122,45 @@ same code as the human report: 0 when nothing is an `error`, 1 otherwise.
 | `config_factory_wired` | `lib/main.dart` passes `paymentsConfig` to `configFactories` |
 | `store_rail_key` | the store rail's `public_sdk_key`, as `present`, `absent` or `blank` |
 
-`status` is `ok`, `warn` or `error`; `fix` appears on every check that is not `ok`. `store_rail_key`
-can only be `ok` or `warn`, for the reason in the next section, so a `warn` never turns `ok` false.
+`status` is `ok`, `warn` or `error`, and `fix` appears on every check that is not `ok`. `store_rail_key` can only be `ok` or `warn`, so it never turns `ok` false. A key is only ever reported as present, absent or blank; its value is never read into the output, so the JSON is safe to paste into a ticket or hand to an agent.
 
-A key is only ever reported as `present`, `absent` or `blank`. Its value is never read into the
-output, so the JSON is safe to paste into a ticket or hand to an agent.
+### The store rail key is reported, not enforced
 
-### The store rail key is REPORTED, not enforced
+The human report says `declared` where the JSON says `present`; the other two words are `absent` and `blank`, and none of them fails the command.
 
-`store rail key` answers `absent`, `blank` or `declared`, and none of them fails the command.
+- `absent` means no `public_sdk_key` was published at all.
+- `blank` means the key is there with every platform arm empty, which is the state a project ships in first.
+- `declared` (`present` in `--json`) means at least one arm carries a value. One is enough: which arms an app needs is not this command's business.
 
-That is deliberate rather than lenient. This command runs on your laptop and cannot know which
-platform you will ship: a web-only or desktop-only app is CORRECT without the key, and failing on it
-would turn a sound project red. But the alternative measured on a real consumer was worse, because
-the driver throws under a customer's finger on the purchase sheet when the key is missing, and doctor
-used to pass in silence while that was true. So it reports, with the consequence attached.
+That is deliberate. The command runs on your laptop and cannot know which platform you will ship, so a web-only or desktop-only app is correct without the key and would turn red for no reason. The report carries the consequence instead: the store driver throws at purchase time when the key is missing.
 
-- `absent` means no `revenuecat` block was published at all.
-- `blank` means the block is there with every platform arm empty, which is the state a project ships
-  in first.
-- `declared` (`present` in `--json`) means at least one arm carries a value. One is enough: a project that filled in iOS and
-  not Android has configured the key, and which arms it needs is not this command's business.
+The value is read as text, with comments stripped first, and never evaluated. The published stub resolves the key per platform through `defaultTargetPlatform` (see [Configuration](../getting-started/configuration.md)), so what sits on disk is Dart source rather than a literal. Stripping comments matters: a reminder such as `// TODO: paste the key from the RevenueCat dashboard` is not mistaken for a key.
 
-The value is read as TEXT, with comments stripped first, and never evaluated. The published stub
-resolves the key per platform through `defaultTargetPlatform` (see
-[Configuration](../getting-started/configuration.md)), so what sits on disk is Dart source rather
-than a literal.
+### What it deliberately does not report
 
-> [!NOTE]
-> Comment-stripping is not cosmetic. Before it, a reminder like
-> `// TODO: paste the key from the 'RevenueCat' dashboard` put a quoted word inside the value block,
-> the check answered `declared`, and the report went green on a rail that could not be configured.
+It does not say which rail your builds can serve. That answer lives behind a conditional import, so the only value a pure-Dart CLI process could read is the one for its own compilation, which is the `dart:io` arm every time regardless of what you build for. Printing it would be a confident wrong answer, so it is absent rather than approximated. See [Drivers](./drivers.md).
 
-### What it deliberately does NOT report
+<a name="mcp"></a>
+## MCP Exposure
 
-It does not say which RAIL your builds can serve. That answer lives behind a conditional import, so
-the only value a pure-Dart CLI process could read is the one for its OWN compilation, which is the
-`dart:io` arm every time regardless of what you build for. Printing that would be a confident wrong
-answer about the one thing this package exists to get right, so it is absent rather than
-approximated. See [Drivers](./drivers.md).
+Only `doctor` is exposed as an MCP tool, `payments_doctor`, with the same two options (`verbose` and `json`). `install` and `configure` both mutate a consuming project's files, and a mutating command is deliberately absent from the MCP surface: an agent can ask whether a project's billing setup is healthy, but installing or reconfiguring it stays a command a human runs.
 
----
+<a name="gotchas"></a>
+## Gotchas
 
-## <a name="mcp"></a>MCP Exposure
+| Mistake | Fix |
+|:--------|:----|
+| Running `payments:install` before the plugin is registered | Run `dart run magic:dowel plugin:install magic_payments` first; the `payments:*` commands come from the provider it registers |
+| Running `payments:install` after adding the dependency to `pubspec.yaml` by hand, without `flutter pub get` | Run `flutter pub get`; the install finds its stub through `.dart_tool/package_config.json` and stops with a message saying so |
+| Re-running `payments:install` to change a value you edited by hand | Use `payments:configure`; install refuses a file that no longer matches its record, and `--force` discards your edit |
+| `payments:configure --driver=<rail name>` | Exits 1: the only mode is `platform`; register your own driver in code with `Payments.extend` |
+| Reading a green `doctor` as "the store rail is configured" | A blank `public_sdk_key` is a warning and still exits 0; check the `store rail key` line or the `store_rail_key` check |
+| Expecting `doctor` to say which rails a build serves | It cannot: the answer is a compile-time import. Ask `Payments.web` and `Payments.store` at runtime |
 
-Only `doctor` is exposed as an MCP tool. `install` and `configure` both mutate a consuming project's
-files, and this ecosystem's CLI providers deliberately do not expose a mutating command as an MCP
-tool: an agent can ask whether a project's billing setup is healthy, but installing or reconfiguring
-it stays a command a human runs.
+<a name="related-documentation"></a>
+## Related Documentation
 
----
-
-**Related**
-
-- [Installation](https://magic.fluttersdk.com/packages/payments/getting-started/installation)
-- [Configuration](https://magic.fluttersdk.com/packages/payments/getting-started/configuration)
-- [Service Provider](https://magic.fluttersdk.com/packages/payments/architecture/service-provider)
+- [Installation](../getting-started/installation.md): adding the package and what `payments:install` leaves behind.
+- [Configuration](../getting-started/configuration.md): the keys `doctor` reads.
+- [Drivers](./drivers.md): why `doctor` cannot report rails.
+- [Service Provider](../architecture/service-provider.md): what the registered provider does at boot.
