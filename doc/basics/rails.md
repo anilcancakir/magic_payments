@@ -247,7 +247,7 @@ On Play it follows the replacement mode in the table above (`deferred` is `atRen
 
 `purchase` refuses, rather than guesses, in these cases, and `restore` refuses only on identity. Each throws a `BillingException` with a typed code (see [Typed errors](#errors)):
 
-- **Identity** (`purchase` and `restore`). Nothing was identified (`notIdentified`), or the SDK's `appUserID` is not the id `identify()` bound (`identityMismatch`). A purchase attributed to another account is one the backend cannot give to the right customer.
+- **Identity** (`purchase` and `restore`). The `billableId` callback is unset or answers `null` or an empty string (`notIdentified`), or the SDK's `appUserID` is not the id `identify()` bound (`identityMismatch`). A purchase attributed to another account is one the backend cannot give to the right customer.
 - **The other store sells the subscription** (`managedElsewhere`). The rail reads the store product ids RevenueCat reports active, and a subscription purchase is refused when one of them belongs to the other store (a Play `subscriptionId:basePlanId` on the App Store rail, an App Store id on the Play rail), because a second subscription here would charge the customer twice. A one-off product is still sold beside it.
 - **A Play product no change can be computed against** (`unmappedActiveProduct`). The account holds a Play product that neither the offerings nor `tierOfStoreProduct` rank, a grandfathered product on the subscription being switched, or more than one Play subscription at once.
 
@@ -265,7 +265,7 @@ Switch on `BillingException.code`, never on `message`, which is prose that diffe
 | `BillingErrorCode` | Meaning |
 |:-------------------|:--------|
 | `notConfigured` | no `public_sdk_key` in this build |
-| `notIdentified` | no paying account identified before a purchase |
+| `notIdentified` | `billableId` is unset or answers `null` or an empty string when a purchase or restore asks |
 | `identityMismatch` | the SDK is bound to a different account than the one asking |
 | `managedElsewhere` | the other store sells a subscription the customer holds (store rail only) |
 | `unmappedActiveProduct` | an active Play product cannot be ranked, so no replacement mode is safe |
@@ -304,7 +304,7 @@ if (await switchTeam(teamId)) {
 }
 ```
 
-Run the first three calls after `await Magic.init(...)`, which restores the stored session when a user factory is registered. Without the `syncNow()`, a returning user's store rail stays unidentified and `purchase` throws `notIdentified` until the next auth change. The alternative is to call `attach()` from a provider that boots before `AuthServiceProvider` (providers boot in the order of `app.providers`, and the restore bumps `Auth.stateNotifier`), which makes the restore itself trigger the sync.
+Run the first three calls after `await Magic.init(...)`, which restores the stored session when a user factory is registered. `syncNow()` identifies the restored user straight away; without it the rail stays unbound until the first `purchase` or `restore`, which run the same sync before they check. `notIdentified` is thrown only when `billableId` is unset or answers `null` or an empty string. The alternative is to call `attach()` from a provider that boots before `AuthServiceProvider` (providers boot in the order of `app.providers`, and the restore bumps `Auth.stateNotifier`), which makes the restore itself trigger the sync.
 
 - `attach()` listens to `Auth.stateNotifier` and syncs on every change after it, without syncing on its own; calling it twice listens once. `detach()` stops listening and forgets what was identified.
 - A build without a store rail, and a session without a subject (`null` or an empty id), identify nothing. A signed-out session unbinds nothing either: the contract has no logout, and the next sign-in overwrites the binding.
@@ -377,7 +377,7 @@ On a non-web platform, never render a link, URL or call to action pointing at we
 | Granting a feature on the `true` from `purchase()` or on a returned `checkout()` | Re-read `Payments.currentEntitlement()`; a store purchase is asynchronous and the backend's answer is the grant |
 | Choosing a management screen with `kIsWeb` or `Platform.is*` | Branch on `BillingEntitlement.manageVia`; a subscription is managed where its rail sold it |
 | Treating `Payments.store != null` as "the store rail is ready" | It only says the device has a store; a blank `public_sdk_key` throws `BillingErrorCode.notConfigured` at purchase time |
-| Calling `purchase()` before anything identified the paying account | Set `StoreIdentitySync.billableId`, call `attach()`, then `await StoreIdentitySync.syncNow()`; otherwise the call throws `notIdentified` |
+| Calling `purchase()` with no paying subject to identify | Set `StoreIdentitySync.billableId` to a callback that answers the subject's id; `purchase` identifies on demand, but throws `notIdentified` when the callback is unset or answers `null` or an empty string |
 | Switching on `BillingException.message` | Switch on `BillingException.code`; the message is prose that differs per rail |
 | Showing intro-offer copy because `introPrice` is set | Gate it on `introEligible`, which defaults to `false` |
 
