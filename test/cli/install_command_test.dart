@@ -170,6 +170,21 @@ void main() async {
       },
     );
 
+    test(
+      'the published subject_label comment names what the driver does',
+      () async {
+        await command.handle(_ctx(command));
+
+        final config = File(at('lib/config/payments.dart')).readAsStringSync();
+
+        // The driver records the label as the `magic_subject` subscriber
+        // attribute and no log line reads it, so a comment saying otherwise
+        // sends an operator looking in the wrong place.
+        expect(config, isNot(contains('log lines')));
+        expect(config, contains('magic_subject'));
+      },
+    );
+
     test('--dry-run writes nothing at all', () async {
       final exitCode = await command.handle(
         _ctx(command, const {'dry-run': true}),
