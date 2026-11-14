@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="https://anilcancakir.com/magic_payments">Documentation</a> ·
+  <a href="https://anilcancakir.com/magic/docs/payments">Documentation</a> ·
   <a href="https://pub.dev/packages/magic_payments">pub.dev</a> ·
   <a href="https://github.com/anilcancakir/magic_payments/issues">Issues</a>
 </p>
@@ -256,7 +256,7 @@ Rules for an agent writing code against this package. Each one is a mistake that
 
 ## Links
 
-- [Documentation](https://anilcancakir.com/magic_payments/docs/getting-started/installation): installation, configuration, the three rails, drivers, the manager and the provider
+- [Documentation](https://anilcancakir.com/magic/docs/payments/getting-started/installation): installation, configuration, the three rails, drivers, the manager and the provider
 - [API reference](https://pub.dev/documentation/magic_payments/latest/)
 - [llms.txt](llms.txt) and the [agent skill](skills/magic-payments/SKILL.md) for AI coding agents: `npx skills add anilcancakir/magic_payments`
 - [Changelog](CHANGELOG.md)

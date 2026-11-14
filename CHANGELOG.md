@@ -10,6 +10,7 @@
 
 ### Changed
 
+- **The package page and every documentation link name the new location under `https://anilcancakir.com/magic/payments`.** The pub.dev page carries it from the next release. (`pubspec.yaml`, `README.md`, `llms.txt`)
 - **The package page names the new owner and a shorter description.** `homepage`, `repository` and `issue_tracker` point at `anilcancakir`, the `documentation` key is gone, and the description leads with the job. The 1.0.0 tag still carried the old homepage. (`pubspec.yaml`)
 - **The post-install message names the dowel command and the store key.** Step 4 reads `dart run magic:dowel payments:doctor`, the command that exists, and step 2 now mentions `revenuecat.public_sdk_key` next to `driver`. (`install.yaml`)
 - **The published `payments_config.stub` comment is truthful about `driver`.** It names `PaymentsServiceProvider.boot()` as the reader, says `platform` is the only value served, and spells the registration call `Payments.extend(role, factory)`. (`assets/stubs/install/payments_config.stub`)

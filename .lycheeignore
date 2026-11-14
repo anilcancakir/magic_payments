@@ -12,8 +12,10 @@
 ^https://github\.com/anilcancakir/magic_payments/security/advisories/new
 
 # The package pages are published with the docs site; until then they answer 404.
-# Added 2026-11-14: remove this line once the docs site serves /magic_payments.
-^https://anilcancakir\.com/magic_payments(?:[/?#]|$)
+# Added 2026-11-15: remove these lines once the docs site serves /magic/payments
+# and /magic/docs/payments.
+^https://anilcancakir\.com/magic/payments(?:[/?#]|$)
+^https://anilcancakir\.com/magic/docs/payments(?:[/?#]|$)
 
 # Placeholder hosts inside example code.
 ^https?://([a-z0-9-]+\.)*example\.com
