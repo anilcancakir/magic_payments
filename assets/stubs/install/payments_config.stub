@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatf
 ///
 /// Which RAIL this build can serve is deliberately NOT configured here: that
 /// answer comes from the conditional import in the package's billing service
-/// factory, so a key claiming to enable or disable Stripe or a store would be a
+/// factory, so a key claiming to enable or disable the web rail or a store would be a
 /// SECOND answer to a question the import graph already settles, and two answers
 /// eventually disagree. A subscription bought on an iPhone is still managed in
 /// the App Store when the customer opens the web app, and only the entitlement

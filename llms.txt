@@ -1,0 +1,90 @@
+# magic_payments
+
+> Subscription billing for Magic apps: the `Payments` facade reads the entitlement your backend serves (`currentEntitlement`, `getPlans`, `getUsage`, `getInvoices`, `getPaymentMethod`) and exposes two nullable rails, the web rail (`Payments.web`: hosted checkout, plan swap, cancel, portal) and the store rail (`Payments.store`: App Store and Play purchases through RevenueCat). The backend decides who is entitled; the package never calls a payment vendor from the app.
+
+**Stack**: Flutter >=3.47.0 · Dart >=3.13.0 · Requires `magic` ^1.0.0 · Runtime deps: `magic`, `purchases_flutter` (store rail); dowel runs the `payments:*` commands. A backend that serves `/billing` is required.
+
+**Setup**:
+
+```bash
+flutter pub add magic_payments
+dart run magic:dowel plugin:install magic_payments
+dart run magic:dowel payments:doctor
+```
+
+```dart
+import 'package:magic_payments/magic_payments.dart';
+
+// PaymentsServiceProvider is registered in lib/config/app.dart by plugin:install.
+Future<void> manageSubscription() async {
+  try {
+    final BillingEntitlement entitlement = await Payments.currentEntitlement();
+
+    if (!entitlement.subscribed) return;
+
+    switch (entitlement.manageVia) {
+      case ManageVia.portal:
+        await Payments.web?.openPortal();
+      case ManageVia.appStore:
+      case ManageVia.playStore:
+        await Payments.store?.openStoreManagement();
+      case ManageVia.none:
+        break;
+    }
+  } on BillingException {
+    // Decide what to tell the customer from `error.code`, never `error.message`.
+  }
+}
+```
+
+`plugin:install` publishes `lib/config/payments.dart`, registers the provider and wires `paymentsConfig` into `configFactories`. On iOS and Android set `payments.revenuecat.public_sdk_key` there; web and desktop builds never read it.
+
+## API
+
+- `Payments` (facade): static `billing`, `web`, `store`; the five reads `currentEntitlement()`, `getPlans()`, `getUsage()`, `getInvoices({cursor})`, `getPaymentMethod()`; `extend(role, factory)`; `forgetDrivers()`.
+- `PaymentsManager`: the singleton behind the facade, bound under `'payments'`. Roles `billingRole`, `webRole`, `storeRole`; `extend` throws `BillingException` for any other role.
+- `PaymentsServiceProvider`: `register()` binds the manager, `boot()` resolves the build's driver and logs which rails exist. Reads `payments.driver`; any value but `'platform'` is logged as an error and ignored.
+- `BillingService` (the five reads), `WebBillingService` (`checkout`, `swap`, `cancel`, `openPortal`), `StoreBillingService` (`identify`, `purchase`, `products`, `restore`, `openStoreManagement`, `store`, `lastChangeTiming`): three unrelated contracts, none extends another.
+- `BillingEntitlement`: `plan`, `planStatus`, `subscribed`, `manageVia`, `manageUrl`, `currentPeriodEnd`, `trialEndsAt`, `gracePeriodEndsAt`, `productKey`, `owned`, `balances`, `allowances`, `raw` and more. Enums: `PlanStatus`, `ManageVia`, `BillingProvider`, `BillingCycle`, `ProductType`, `StoreChangeTiming`, `InvoiceStatus`, `BillingErrorCode`.
+- `BillingException` (`message`, `code`) and `UnsupportedPlatformException`.
+- `StoreIdentitySync`: `billableId` (your resolver), `attach()`, `detach()`, `syncNow()`. It keeps the store rail bound to the paying account.
+- `payments:install` (`--dry-run`, `--force`), `payments:configure` (`--show`, `--driver=platform`), `payments:doctor` (`--verbose`, `--json`) in `package:magic_payments/cli.dart` (`MagicPaymentsDowelProvider`). Only `payments_doctor` is an MCP tool.
+
+## Platforms
+
+- The five reads run on web, iOS, Android, macOS, Windows and Linux: `GET /billing`, `/billing/plans`, `/billing/usage`, `/billing/invoices`, `/billing/payment-method` through magic's `Http` facade. On a platform that is neither web nor `dart:io` every read throws `UnsupportedPlatformException`.
+- Web rail: `Payments.web` is non-null on web builds only (`POST /billing/checkout`, `/billing/swap`, `/billing/cancel`; `GET /billing/portal`). Hosted pages open in an in-app web view.
+- Store rail: `Payments.store` is non-null on iOS and Android only, through RevenueCat. It is `null` on web, macOS, Windows and Linux.
+- The backend half is `magic-starter-laravel`'s `api/v1/billing` routes; `/billing/usage` exists there only when the app binds its usage contract.
+
+## Rules for agents
+
+- Import only `package:magic_payments/magic_payments.dart`; everything under `src/` is private, and `cli.dart` is for the command line.
+- Check `Payments.web` and `Payments.store` for `null` before rendering a purchase affordance. Never choose a rail or a management screen with `kIsWeb` or `Platform.is*`; branch on `BillingEntitlement.manageVia`.
+- The backend is the authority. Read `currentEntitlement()` again after `purchase`, `checkout`, `swap` or `cancel`: a store purchase returns `true` before the webhook may have landed.
+- Switch on `BillingException.code`, never on `message`. A dismissed store sheet is `false` from `purchase`, not an exception.
+- Non-null `Payments.store` does not mean configured: a blank or absent `payments.revenuecat.public_sdk_key` throws `BillingErrorCode.notConfigured` at first use. The key is the public one; never put the RevenueCat secret key in the app.
+- Set `StoreIdentitySync.billableId` and call `attach()` before a store purchase. Unset, `purchase` and `restore` throw `notIdentified`; a rail bound to another account throws `identityMismatch`; a subscription held in the other store throws `managedElsewhere`.
+- The store rail does not see a subscription billed on the web. Gate a store purchase on `entitlement.manageVia != ManageVia.portal`, and on iOS and Android never link to web checkout or the portal (App Review Guideline 3.1.3(a)).
+- `payments.driver` accepts `platform` only; `payments:configure --driver=x` exits 1. Register your own rail in code with `Payments.extend(PaymentsManager.storeRole, () => MyRail())`.
+- A web write refused with 422 `product_not_sellable` is `productUnavailable`; a 402 with `payment_failed` or `payment_requires_action` is `paymentDeclined` or `paymentRequiresAction`, and nothing changed.
+- `getPaymentMethod()` reports a rail outage as a `PaymentMethod` with every field null: gate on `available`, not on a null `last4`. Show intro copy only when `StoreProductOffer.introEligible` is `true`.
+- `payments:doctor` cannot say which rails a build serves, because that is a compile-time import; a blank store key warns and still exits 0.
+- In tests call `Payments.forgetDrivers()` in `tearDown`: the manager is a `static final` that outlives a container reset.
+
+## Docs
+
+- [Installation](https://anilcancakir.com/magic_payments/docs/getting-started/installation.md): add the package, register its provider and config, and see which rail each platform gets.
+- [Configuration](https://anilcancakir.com/magic_payments/docs/getting-started/configuration.md): the `payments.*` keys, the per-platform RevenueCat key, and why the rail is not configured.
+- [Rails](https://anilcancakir.com/magic_payments/docs/basics/rails.md): the three contracts, product keys, typed errors, store identity and entitlement authority.
+- [Drivers](https://anilcancakir.com/magic_payments/docs/basics/drivers.md): the conditional-import factory, the web, io and stub drivers, and overriding one.
+- [CLI Reference](https://anilcancakir.com/magic_payments/docs/basics/cli.md): `payments:install`, `payments:configure` and `payments:doctor`, and the MCP tool.
+- [Payments Manager](https://anilcancakir.com/magic_payments/docs/architecture/payments-manager.md): the singleton behind the facade, the three roles and `extend`.
+- [Service Provider](https://anilcancakir.com/magic_payments/docs/architecture/service-provider.md): what `register()` binds and what `boot()` resolves.
+
+## Links
+
+- [README](https://github.com/anilcancakir/magic_payments/blob/master/README.md): install, the three capabilities, the agent rules table.
+- [API reference](https://pub.dev/documentation/magic_payments/latest/): generated from the doc comments.
+- [Changelog](https://github.com/anilcancakir/magic_payments/blob/master/CHANGELOG.md): what changed in each version.
+- [Source](https://github.com/anilcancakir/magic_payments): issues and pull requests.

@@ -1,7 +1,7 @@
 /// Multi-rail billing for the Magic Framework.
 ///
-/// One entitlement contract over more than one payment rail: Stripe on the web,
-/// and store in-app purchase on iOS and Android. A consumer asks what a customer
+/// One entitlement contract over more than one payment rail: a web rail your
+/// backend bills through, and store in-app purchase on iOS and Android. A consumer asks what a customer
 /// is entitled to and where they manage it; which rail sold the subscription is
 /// the package's problem, not the caller's.
 ///

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **The post-install message names the dowel command and the store key.** Step 4 reads `dart run magic:dowel payments:doctor`, the command that exists, and step 2 now mentions `revenuecat.public_sdk_key` next to `driver`. (`install.yaml`)
+
 ## 1.0.0
 
 ### Changed

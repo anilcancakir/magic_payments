@@ -1,79 +1,240 @@
-# Magic Payments
+<p align="center">
+  <img src="https://raw.githubusercontent.com/anilcancakir/magic_payments/master/.github/magic-logo.svg" width="120" alt="Magic Payments Logo" />
+</p>
 
-Multi-rail billing for the [Magic Framework](https://github.com/fluttersdk/magic). One entitlement
-contract over Stripe on the web and store in-app purchase on iOS and Android.
+<h1 align="center">Magic Payments</h1>
 
-## Why it exists
+<p align="center">
+  <strong>Ask one question, what is this customer entitled to, whichever rail sold the subscription.</strong><br/>
+  Subscription billing for Magic apps: the <code>Payments</code> facade reads the entitlement your backend serves and hands you the web rail (hosted checkout and portal) and the store rail (App Store and Play, through RevenueCat) as nullable contracts, so no widget branches on the platform.
+</p>
 
-A subscription can be sold by more than one rail, and each rail has its own vocabulary, its own idea
-of when a period ends, and its own opinion about who may cancel. An app that talks to them directly
-ends up with that vocabulary spread across its widgets.
+<p align="center">
+  <a href="https://pub.dev/packages/magic_payments"><img src="https://img.shields.io/pub/v/magic_payments.svg" alt="pub package"></a>
+  <a href="https://github.com/anilcancakir/magic_payments/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anilcancakir/magic_payments/ci.yml?branch=master&label=CI" alt="CI"></a>
+  <a href="https://codecov.io/gh/anilcancakir/magic_payments"><img src="https://codecov.io/gh/anilcancakir/magic_payments/graph/badge.svg" alt="codecov"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://pub.dev/packages/magic_payments/score"><img src="https://img.shields.io/pub/points/magic_payments" alt="pub points"></a>
+</p>
 
-Magic Payments puts one contract in front of them. A consumer asks two questions, what is this
-customer entitled to and where do they manage it, and the answers are rail-neutral:
+<p align="center">
+  <a href="https://anilcancakir.com/magic_payments">Documentation</a> ·
+  <a href="https://pub.dev/packages/magic_payments">pub.dev</a> ·
+  <a href="https://github.com/anilcancakir/magic_payments/issues">Issues</a>
+</p>
+
+## At a glance
+
+| Fact | Value |
+|---|---|
+| Package | [`magic_payments`](https://pub.dev/packages/magic_payments) |
+| Install | `flutter pub add magic_payments`, then `dart run magic:dowel plugin:install magic_payments` |
+| Import | `package:magic_payments/magic_payments.dart` |
+| Entry points | `Payments` (facade), `PaymentsManager`, `PaymentsServiceProvider`, `BillingService`, `WebBillingService`, `StoreBillingService`, `StoreIdentitySync`, `BillingException`; `payments:install`, `payments:configure`, `payments:doctor` (CLI) |
+| Platforms | The reads run on web, iOS, Android, macOS, Windows and Linux. The web rail exists on web builds, the store rail on iOS and Android. |
+| Requires | Dart >=3.13, Flutter >=3.47, `magic` ^1.0.0, and a backend that serves the `/billing` endpoints |
+| Dependencies | `magic`, `purchases_flutter` (store rail); dowel runs the commands |
+| License | MIT |
+
+## Install
+
+```bash
+flutter pub add magic_payments
+dart run magic:dowel plugin:install magic_payments
+```
+
+`plugin:install` applies the bundled `install.yaml`: it publishes `lib/config/payments.dart`, registers `PaymentsServiceProvider` in `lib/config/app.dart` and adds `paymentsConfig` to the `configFactories` of `lib/main.dart`. `dart run magic:dowel payments:install` applies the same plan again, and `--dry-run` shows it without writing.
+
+On iOS and Android fill in `payments.revenuecat.public_sdk_key` (RevenueCat's public SDK key, `appl_...` for the App Store and `goog_...` for Play) in `lib/config/payments.dart`. Web and desktop builds never read it. Check the wiring:
+
+```bash
+dart run magic:dowel payments:doctor
+```
+
+## Entitlement
+
+Read what the customer is entitled to and send them to the surface that owns the subscription.
 
 ```dart
-final entitlement = await Payments.currentEntitlement();
+import 'package:magic_payments/magic_payments.dart';
 
-if (entitlement.subscribed) {
-  // `manageVia` says which surface owns the subscription: our own billing
-  // portal, the App Store, or Play. The caller never checks the platform.
-  showManageButton(entitlement.manageVia, entitlement.manageUrl);
+Future<void> manageSubscription() async {
+  try {
+    final BillingEntitlement entitlement = await Payments.currentEntitlement();
+
+    if (!entitlement.subscribed) return;
+
+    switch (entitlement.manageVia) {
+      case ManageVia.portal:
+        await Payments.web?.openPortal();
+      case ManageVia.appStore:
+      case ManageVia.playStore:
+        await Payments.store?.openStoreManagement();
+      case ManageVia.none:
+        break;
+    }
+  } on BillingException {
+    // Decide what to tell the customer from `error.code`, never `error.message`.
+  }
 }
 ```
 
-The rail that sold the subscription is the package's problem. The platform the app happens to be
-running on is a different axis entirely, and conflating the two is the mistake this package exists to
-prevent: a subscription bought on a phone is still managed in its store when the customer opens the
-web app.
+The five reads are the same calls on `Payments.billing` and as static methods on `Payments`:
 
-## What you get
+| Member | Returns | Request |
+|--------|---------|---------|
+| `currentEntitlement()` | `BillingEntitlement` | `GET /billing` |
+| `getPlans()` | `List<Map<String, dynamic>>`, one backend row per tier, undecoded | `GET /billing/plans` |
+| `getUsage()` | `List<UsageStat>` | `GET /billing/usage` |
+| `getInvoices({cursor})` | `BillingInvoicesPage` (`invoices`, `nextCursor`) | `GET /billing/invoices` |
+| `getPaymentMethod()` | `PaymentMethod` | `GET /billing/payment-method` |
 
-Three contracts, and the split is the API. `BillingService` carries the five entitlement reads and is
-honourable on every platform, because the backend is the authority on what a customer is entitled to.
-The two rails are nullable, and a `null` rail is a build that cannot serve it:
+The requests go through magic's `Http` facade to the base URL your app configures. Failure modes:
 
-| Role | Access | Where it exists |
-|------|--------|-----------------|
-| Reads | `Payments.billing` | Everywhere. Entitlement, plans, usage, invoices, payment method. |
-| Web rail | `Payments.web` | Web builds. Hosted Stripe checkout, plan swap, cancel, customer portal. |
-| Store rail | `Payments.store` | iOS and Android, through RevenueCat. |
+| Situation | What happens |
+|-----------|--------------|
+| A non-success response, or a body of the wrong shape | The read throws `BillingException`. |
+| The backend serves no `/billing/usage` route | `getUsage()` throws `BillingException`. `magic-starter-laravel` registers that route only when the app binds its usage contract. |
+| The payment rail is down on the backend | `getPaymentMethod()` answers a `PaymentMethod` with every field null. Gate the copy on `PaymentMethod.available`, not on a null `last4`. |
+| A platform that is neither web nor `dart:io` | Every read throws `UnsupportedPlatformException`, never an empty answer. |
 
-A rail is CHECKED, never assumed. Asking whether it exists is what decides whether a purchase button
-renders at all, rather than rendering one that fails when tapped.
+`BillingEntitlement.manageVia` is where the subscription is managed (`portal`, `appStore`, `playStore`, `none`), and it follows the rail that sold it, not the platform the app runs on. A subscription bought on a phone is still managed in its store when the customer opens the web app. The backend decides the entitlement; a `true` from a purchase or a returned checkout is a hint, so read `currentEntitlement()` again after any write.
 
-## Installation
+## Web rail
 
-```yaml
-dependencies:
-  magic_payments: ^1.0.0
-```
-
-```bash
-# Register the plugin's dowel provider with the app dispatcher (once)
-dart run magic:dowel plugin:install magic_payments
-
-# Publish lib/config/payments.dart and register the config factory
-dart run magic:dowel payments:install
-```
-
-Then register the service provider in your app's config, as with any Magic plugin:
+`Payments.web` is a `WebBillingService` on web builds and `null` everywhere else. Your backend owns the payment vendor and creates the hosted pages; the package calls your backend and opens what it returns.
 
 ```dart
-'providers': [
-  // ...existing providers...
-  (app) => PaymentsServiceProvider(app),
-],
+import 'package:magic_payments/magic_payments.dart';
+
+Future<void> upgrade() async {
+  final WebBillingService? web = Payments.web;
+  if (web == null) return;
+
+  await web.checkout(
+    productKey: 'pro_annual',
+    successUrl: 'https://example.com/billing?checkout=success',
+    cancelUrl: 'https://example.com/billing?checkout=cancel',
+  );
+}
 ```
 
-`dart run magic:dowel payments:doctor` reports which rails the build resolved and whether the store
-rail has the key it needs.
+| Member | Returns | Request |
+|--------|---------|---------|
+| `checkout({productKey, successUrl, cancelUrl})` | `BillingCheckoutSession`; opens `checkoutUrl` in an in-app web view | `POST /billing/checkout` |
+| `swap({productKey})` | `void` | `POST /billing/swap` |
+| `cancel()` | `void`; usually end of period, so the entitlement keeps granting until `currentPeriodEnd` | `POST /billing/cancel` |
+| `openPortal({returnUrl})` | The portal URL; opens it in an in-app web view | `GET /billing/portal` |
 
-## Documentation
+`productKey` is your catalogue key (`'pro_annual'`): one key names the tier and the cycle, and it is the `key` of an entry in a `getPlans()` row's `products` list. Failure modes:
 
-Full documentation lives at
-[magic.fluttersdk.com/packages/payments](https://magic.fluttersdk.com/packages/payments/getting-started/installation).
+| Situation | What happens |
+|-----------|--------------|
+| `Payments.web` off a web build | `null`. Check it before rendering the button. |
+| 422 with `code: product_not_sellable` | `BillingException` with `BillingErrorCode.productUnavailable`. |
+| 402 with `billing.reason` `payment_failed` or `payment_requires_action` | `BillingException` with `paymentDeclined` or `paymentRequiresAction`; nothing changed. |
+| The launcher refuses the hosted page | `BillingException`, never a silent success. |
+| Any other refusal | `BillingException` with `BillingErrorCode.unknown`. |
+
+## Store rail
+
+`Payments.store` is a `StoreBillingService` on iOS and Android and `null` on web, on macOS, Windows and Linux, and on a platform the package has never seen. `RevenueCatStoreService` serves it through `purchases_flutter`.
+
+```dart
+import 'package:magic_payments/magic_payments.dart';
+
+Future<void> buy() async {
+  final StoreBillingService? store = Payments.store;
+  if (store == null) return;
+
+  final bool bought = await store.purchase('pro_annual');
+
+  // The store is done; the backend's webhook may not have caught up. Treat a
+  // stale answer as "not yet", never as a failure.
+  if (bought) await Payments.currentEntitlement();
+}
+```
+
+| Member | Meaning |
+|--------|---------|
+| `identify(appUserId)` | Binds the rail to the paying account. `StoreIdentitySync` calls it for you. |
+| `purchase(productKey, {context})` | `true` when the store completed a transaction, `false` when the customer dismissed the sheet. `context` is a `PurchaseContext` that lets a Play change be ranked as an upgrade or a downgrade. |
+| `products(productKeys)` | `Map<String, StoreProductOffer>` with the store's own localised prices. A key the store has no product for is absent from the map. |
+| `restore()` | `true` when the store handed back a purchase, `false` when it had nothing for the identified account. |
+| `openStoreManagement()` | Opens the store's subscription screen. Throws `BillingException` when the account holds no store subscription. |
+| `store` | `ManageVia.appStore` or `ManageVia.playStore`. |
+| `lastChangeTiming` | After a `true` from `purchase`, `immediate`, `atRenewal` or `null` (nothing to announce). |
+
+Switch on `BillingException.code`, a `BillingErrorCode`, never on `message`:
+
+| Code | Cause |
+|------|-------|
+| `notConfigured` | `payments.revenuecat.public_sdk_key` is blank or absent. Non-null `Payments.store` does not mean configured. |
+| `notIdentified` | No paying account was identified before a `purchase` or `restore`. |
+| `identityMismatch` | The SDK is bound to another account than the one asking. |
+| `managedElsewhere` | The other store sells a subscription the customer holds. |
+| `unmappedActiveProduct` | An active Play product cannot be ranked, so no replacement mode is safe. |
+| `productUnavailable` | No store product for the key, or the backend will not sell it. |
+| `pending`, `receiptInUse`, `alreadyOwned`, `network`, `store` | The store's own outcome; `unknown` is a failure no driver named. |
+
+The store rail does not refuse a subscription your backend bills on the web, because RevenueCat cannot see it. Gate a store purchase on `entitlement.manageVia != ManageVia.portal` yourself.
+
+## Keeping the store identified
+
+`purchase` and `restore` refuse unless the rail is bound to the account that pays. `StoreIdentitySync` keeps it bound; you supply who pays.
+
+```dart
+import 'package:magic_payments/magic_payments.dart';
+
+void wireStore(String? Function() payingId) {
+  StoreIdentitySync.billableId = payingId;
+  StoreIdentitySync.attach();
+}
+```
+
+`attach()` identifies on every `Auth.stateNotifier` change. After a switch of the paying subject that does not change auth state, such as a team switch, call `await StoreIdentitySync.syncNow()`. While `billableId` is unset nothing is identified and every store purchase throws `notIdentified`.
+
+## Command line
+
+| Command | Does | Writes files |
+|---------|------|--------------|
+| `payments:install` | Publishes the config, registers the provider, wires the config factory. Idempotent; `--dry-run`, `--force`. | Yes |
+| `payments:configure` | `--show` prints `driver`; `--driver=platform` sets it. Any other value exits 1. | Yes |
+| `payments:doctor` | Checks the dependency, the config, the provider, the config factory and the store key. `--verbose`, `--json`. | No |
+
+`payments:doctor` reports the store rail's key only as `present`, `absent` or `blank`, never its value, and a blank key warns without failing. It cannot say which rails a build serves, because that is a compile-time import. Only `payments_doctor` is an MCP tool; the two commands that write files are not.
+
+## For AI coding agents
+
+Rules for an agent writing code against this package. Each one is a mistake that charges a customer wrongly or hides a purchase button that should show.
+
+| Do | Because |
+|----|---------|
+| Import only `package:magic_payments/magic_payments.dart` | Everything under `src/` is private, and `package:magic_payments/cli.dart` is for the command line only. |
+| Check `Payments.web` and `Payments.store` for `null` before rendering a purchase affordance | A `null` rail is a build that cannot serve it; rendering a button and catching the refusal is the shape this package replaced. |
+| Branch management screens on `BillingEntitlement.manageVia` | A subscription is managed where its rail sold it, whatever platform the app runs on. Never use `kIsWeb` or `Platform.is*`. |
+| Read `currentEntitlement()` again after `purchase`, `checkout`, `swap` or `cancel` | The backend's answer is the grant; the write's own result is only a hint. |
+| Switch on `BillingException.code` | `message` is prose that differs per rail and locale. |
+| Set `StoreIdentitySync.billableId` and call `attach()` before any store purchase | Without a paying subject `purchase` and `restore` throw `notIdentified`. |
+| Never put a RevenueCat secret key in `lib/config/payments.dart` | `public_sdk_key` is the public key and ships in the app bundle. |
+| Never render a link to web checkout or the web portal on iOS or Android | App Review Guideline 3.1.3(a) restricts steering a customer to another purchase method. |
+| Show intro-offer copy only when `StoreProductOffer.introEligible` is `true` | An `introPrice` alone says the product has an offer, not that this customer may take it. |
+| Register a driver of your own with `Payments.extend(role, factory)`, never through `payments.driver` | `driver` accepts `platform` only, and the roles are `billing`, `web` and `store`. |
+| In a test, call `Payments.forgetDrivers()` in `tearDown` | `PaymentsManager` is a `static final` that outlives a container reset. |
+
+## Dependencies
+
+`magic` for the container, the `Http`, `Config`, `Log`, `Launch` and `Auth` facades and the service provider base class; `purchases_flutter` for the RevenueCat SDK behind the store rail; dowel to run the `payments:*` commands through `dart run magic:dowel`. The command tree lives in `package:magic_payments/cli.dart`, which imports no UI toolkit, so the commands run as a plain Dart process and the runtime barrel carries no command code.
+
+## Links
+
+- [Documentation](https://anilcancakir.com/magic_payments/docs/getting-started/installation): installation, configuration, the three rails, drivers, the manager and the provider
+- [API reference](https://pub.dev/documentation/magic_payments/latest/)
+- [llms.txt](llms.txt) and the [agent skill](skills/magic-payments/SKILL.md) for AI coding agents: `npx skills add anilcancakir/magic_payments`
+- [Changelog](CHANGELOG.md)
+- [Report an issue](https://github.com/anilcancakir/magic_payments/issues)
+- [Security policy](SECURITY.md)
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE). Built by [Anılcan Çakır](https://anilcancakir.com).
