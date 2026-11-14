@@ -99,7 +99,7 @@ name: test_app
 dependencies:
   flutter:
     sdk: flutter
-  magic_payments: ^0.0.1
+  magic_payments: ^1.0.0
 ''');
     Directory(at('.dart_tool')).createSync(recursive: true);
     File(at('.dart_tool/package_config.json')).writeAsStringSync('''

@@ -24,8 +24,8 @@ never touches the CLI does not pay for the command tree in its runtime build; it
 Flutter or `dart:ui`.
 
 > [!NOTE]
-> The exact flags each command accepts are still settling in this version. Run any command with
-> `--help` for the authoritative, current set rather than relying on this page for flag names.
+> Run any command with `--help` for the authoritative set of flags rather than relying on this page
+> for flag names.
 
 ---
 

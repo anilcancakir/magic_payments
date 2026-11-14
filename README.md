@@ -3,10 +3,6 @@
 Multi-rail billing for the [Magic Framework](https://github.com/fluttersdk/magic). One entitlement
 contract over Stripe on the web and store in-app purchase on iOS and Android.
 
-> [!NOTE]
-> The public API is still settling during the `0.1.x` line. Pin an exact version
-> (`magic_payments: 0.1.0`) if you depend on it.
-
 ## Why it exists
 
 A subscription can be sold by more than one rail, and each rail has its own vocabulary, its own idea
@@ -50,7 +46,7 @@ renders at all, rather than rendering one that fails when tapped.
 
 ```yaml
 dependencies:
-  magic_payments: ^0.1.0
+  magic_payments: ^1.0.0
 ```
 
 ```bash

@@ -55,7 +55,7 @@ name: test_app
 dependencies:
   flutter:
     sdk: flutter
-  magic_payments: ^0.0.1
+  magic_payments: ^1.0.0
 ''');
 
     // The manifest installer resolves the plugin's own assets/stubs/ through

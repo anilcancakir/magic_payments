@@ -5,22 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 /// Guards the three version floors in `pubspec.yaml`, because each one is a
 /// mistake this package was created having already seen.
 ///
-/// A caret is a FLOOR, including at `0.0.z`. Dart's is not npm's: `pub_semver`
-/// bumps the minor when major is 0, so `^0.0.8` means `>=0.0.8 <0.1.0` and a
-/// solver is free to hand back `0.0.13`. What a caret cannot do is reach BELOW
-/// itself, which is the whole reason these floors are asserted: a sibling
-/// plugin once declared `dowel: ^0.0.8` against a published `0.0.13`, and
-/// copying that stale caret here would let a solver satisfy this package with a
-/// five-release-old CLI whenever something else in the graph wanted one. Likewise the `environment` block is inherited from `magic`
-/// rather than chosen, and copying a sibling's older block would claim support
-/// this package cannot honour.
-///
-/// An earlier version of this docblock said a `0.0.z` caret pins the patch.
-/// It does not, and the claim is corrected here rather than deleted because it
-/// travelled: it was read as fact and cost a downstream plan a blocker that
-/// did not exist. Measured with a scratch package reproducing the published
-/// graph, where `^0.0.9` resolved the CLI `0.0.13` and `^0.0.2` resolved
-/// notifications `0.0.3`.
+/// A caret is a FLOOR: it cannot reach BELOW itself, which is the whole reason
+/// these floors are asserted. A sibling plugin once declared a stale `dowel`
+/// caret, and copying it here would let a solver satisfy this package with an
+/// older CLI whenever something else in the graph wanted one. Likewise the
+/// `environment` block is inherited from `magic` rather than chosen, and
+/// copying a sibling's older block would claim support this package cannot
+/// honour.
 ///
 /// A test rather than a comment because a comment cannot fail.
 void main() {
@@ -40,17 +31,18 @@ void main() {
       expect(pubspec, isNot(contains('flutter: ">=3.27.0"')));
     });
 
-    test('the dowel floor is the published patch, not a stale one', () {
-      expect(pubspec, contains('dowel: ^0.0.21'));
-      expect(pubspec, isNot(contains('dowel: ^0.0.20')));
-      expect(pubspec, isNot(contains('dowel: ^0.0.8')));
-      expect(pubspec, isNot(contains('dowel: ^0.0.13')));
+    test('the dowel floor is the stable release, not a stale pre-1.0 one', () {
+      expect(pubspec, contains('dowel: ^1.0.0'));
+      expect(pubspec, isNot(contains('^0.0.21')));
+      expect(pubspec, isNot(contains('^0.0.20')));
+      expect(pubspec, isNot(contains('^0.0.8')));
+      expect(pubspec, isNot(contains('^0.0.13')));
     });
 
-    // 0.1.0 is the release that moved the optional layers out of core, and the
-    // floor names the release this package is verified against.
+    // The floor names the release this package is verified against.
     test('magic is pinned to the release this package is verified against', () {
-      expect(pubspec, contains('magic: ^0.1.0'));
+      expect(pubspec, contains('magic: ^1.0.0'));
+      expect(pubspec, isNot(contains('magic: ^0.')));
     });
   });
 }
