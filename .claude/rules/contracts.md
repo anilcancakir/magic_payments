@@ -22,7 +22,7 @@ Nothing in a model or contract consults `kIsWeb`, `Platform.is*` or `defaultTarg
 
 ## Wire vocabulary
 
-Every enum is a wire vocabulary whose producer lives in another repository.
+Every enum except `BillingErrorCode` and `StoreChangeTiming` is a wire vocabulary whose producer lives in another repository; those two are client-side only and never cross the wire.
 
 - Match literals in `toWire` and `fromWire`, never `.name`: a member whose Dart spelling differs from the producer's (`semiAnnual` against `semi_annual`) round-trips through `.name`, keeps the enum test green and sends a request the producer rejects with a 422.
 - Decode additively: `fromWire` degrades instead of throwing so an older client survives a new producer case, and every new model key is optional with a null or false default.

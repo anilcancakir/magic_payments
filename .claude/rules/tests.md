@@ -8,8 +8,9 @@ paths:
 
 ## Fixtures, fallbacks and guards
 
-- Copy a fixture from the producer, never write it from memory. A fixture with a key the producer never emits, or a value its enum cannot hold, passes every assertion and proves nothing: `BillingEntitlement.fromMap` reads `plan_status`, so a fixture carrying `status` decodes to null while the test stays green.
-- A decoder fallback hides a forgotten case as well as it handles a newer server. Loop the full vocabulary through the decoder, assert nothing lands on the fallback, and assert the decoded values are distinct, because a loop alone cannot see a case mapped onto its neighbour (`test/enums/enums_test.dart` is the pattern).
+- Copy a fixture for a valid payload from the producer, never write it from memory. A valid-payload fixture with a key the producer never emits, or a value its enum cannot hold, passes every assertion and proves nothing: `BillingEntitlement.fromMap` reads `plan_status`, so a fixture carrying `status` decodes to `PlanStatus.none` while the test stays green.
+- A negative fixture is the exception: write the wrong key or unknown word on purpose when the test proves the decoder ignores it, as the `status`-only test in `test/models/models_test.dart` does by asserting `PlanStatus.none`.
+- A decoder fallback hides a forgotten case as well as it handles a newer server. Loop the full producer vocabulary through the decoder and assert no word lands on the fallback, except a word whose valid result is the fallback (the wire word `none` reads as `none`). Assert the decoded values are distinct when the map is one-to-one, because a loop alone cannot see a case mapped onto its neighbour. Assert a many-to-one map as what it is: `InvoiceStatus` folds five Stripe words into three states, so check each word's state and that the decoded set covers every member. `test/enums/enums_test.dart` is the pattern for both.
 - Reach every defensive branch, each `??` right side included, deliberately: override the config, build the model by hand or inject the failure. A branch nothing exercises is where the next defect lives.
 - Write one test per guard when two guards protect one outcome, and check it by deleting that guard and watching only its own test fail. One assertion over two guards still passes when either is deleted.
 
