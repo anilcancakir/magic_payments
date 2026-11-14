@@ -19,11 +19,10 @@ contract in front of two payment rails: Stripe on the web, and the platform's ow
 system on iOS and Android. A consuming app asks two questions, what is this customer entitled to and
 where do they manage it, and the answers are rail-neutral.
 
-> [!WARNING]
-> The store rail (`StoreBillingService`) is declared in this package but has no implementation yet.
-> `createStoreBillingService()` returns `null` on every build, so no app built against this version
-> can offer a mobile purchase. The five reads (`BillingService`) and the web rail
-> (`WebBillingService`) are real and work today. See [Rails](../basics/rails.md).
+> [!NOTE]
+> Which rail a build has depends on its platform. Web has the web rail (`WebBillingService`) and no
+> store rail. iOS and Android have the RevenueCat store rail (`StoreBillingService`) and no web rail.
+> The five reads (`BillingService`) exist on every build. See [Rails](../basics/rails.md).
 
 ---
 
@@ -33,7 +32,7 @@ Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  magic_payments: ^0.0.12
+  magic_payments: ^1.0.0
 ```
 
 Then fetch dependencies:
@@ -41,11 +40,6 @@ Then fetch dependencies:
 ```bash
 flutter pub get
 ```
-
-> [!NOTE]
-> The public API is still settling ahead of a `0.1.0` release. Pin an exact version
-> (`magic_payments: 0.0.12`) if you depend on it before then, the same caution the package's own
-> README carries.
 
 ---
 
@@ -116,15 +110,14 @@ Which rail is present is decided by the package's own conditional-import factory
 
 ## <a name="cli"></a>CLI Setup
 
-Magic Payments ships three CLI commands on `fluttersdk_artisan`: `install`, `configure` and
+Magic Payments ships three CLI commands on `dowel`: `install`, `configure` and
 `doctor`.
 
 ```bash
 dart run magic_payments doctor
 ```
 
-The exact flags each command accepts are still settling alongside the rest of the public API in
-this version; run a command with `--help` for the authoritative set, and see
+Run a command with `--help` for the authoritative set of flags, and see
 [CLI Reference](../basics/cli.md) for what each command is for.
 
 ---
