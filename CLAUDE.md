@@ -43,7 +43,7 @@ tool/check-docs.py                   # Offline docs gate, run by docs-link-check
 
 ## Post-Change Checklist
 
-After ANY source code change, sync **before committing**. A change is not done while one of these is stale:
+After a source code change, sync **before committing**. A change is not done while one of these is stale:
 
 1. **`CHANGELOG.md`**: Add entry under `[Unreleased]` section
 2. **`README.md`, `llms.txt` and the `doc/` pages**: Update if features, API, or usage changes
@@ -70,7 +70,7 @@ Every feature, fix, or refactor goes through red-green-refactor: write a failing
 | Letting `payments:configure` accept a driver other than `platform` | `servedDriverModes` in `configure_command.dart` is the one owner; the doctor reads the same set |
 | Writing that the package integrates Stripe | The web rail calls the backend's `/billing` routes; the vendor sits behind them |
 | Treating `example/` as unshipped | It is in the pub archive, since `.pubignore` does not list it; a change there is a docs change with no CHANGELOG entry |
-| Relative paths in `pubspec_overrides.yaml` | Use ABSOLUTE ones; the file is never committed |
+| Relative paths in `pubspec_overrides.yaml` | Use absolute ones; the file is never committed |
 
 ## Release
 
