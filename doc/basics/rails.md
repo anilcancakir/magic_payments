@@ -141,11 +141,16 @@ The contract makes one non-promise, and it is the whole reason the store rail is
 ```dart
 final StoreBillingService? store = Payments.store;
 if (store != null) {
-  final bool bought = await store.purchase('pro_annual');
-  if (bought) {
-    // The store is done. The entitlement may not have caught up yet.
-    // Treat a stale answer as "not yet", never as a failure.
-    await Payments.currentEntitlement();
+  // The rail cannot see a subscription billed on the web.
+  final BillingEntitlement held = await Payments.currentEntitlement();
+
+  if (held.manageVia != ManageVia.portal) {
+    final bool bought = await store.purchase('pro_annual');
+    if (bought) {
+      // The store is done. The entitlement may not have caught up yet.
+      // Treat a stale answer as "not yet", never as a failure.
+      await Payments.currentEntitlement();
+    }
   }
 }
 ```
@@ -327,17 +332,40 @@ A subscription bought on an iPhone is still managed in the App Store when the cu
 So a consumer branches its management affordances on `BillingEntitlement.manageVia` (`ManageVia.portal`, `.appStore`, `.playStore` or `.none`), never on `kIsWeb` or `Platform.is`:
 
 ```dart
+// `openUrl` stands for your app's own URL launcher.
 switch (entitlement.manageVia) {
   case ManageVia.portal:
-    await Payments.web?.openPortal();
+    final WebBillingService? web = Payments.web;
+
+    if (web != null) {
+      // Web builds only.
+      await web.openPortal();
+    } else {
+      // iOS, Android and desktop have no portal call, and iOS and Android
+      // must not link to the web portal: say where it is managed, no link.
+    }
   case ManageVia.appStore:
   case ManageVia.playStore:
-    await Payments.store?.openStoreManagement();
+    final StoreBillingService? store = Payments.store;
+    final String? manageUrl = entitlement.manageUrl;
+
+    if (store != null) {
+      // iOS and Android builds.
+      await store.openStoreManagement();
+    } else if (manageUrl != null) {
+      // The web app and desktop: `Payments.store` is null there.
+      await openUrl(manageUrl);
+    } else {
+      // Nothing to open: say it is managed in the App Store or Google Play,
+      // without a link.
+    }
   case ManageVia.none:
     // Nowhere to send the customer: no rail, an operator grant, or an unknown rail.
     break;
 }
 ```
+
+The store case cannot be a null-aware call. A customer who bought on a phone and opens the web app still has a store `manageVia`, and `Payments.store` is `null` there, so `Payments.store?.openStoreManagement()` would do nothing and tell the customer nothing. `openStoreManagement()` exists on iOS and Android builds only. Without the rail, use `BillingEntitlement.manageUrl` when the backend sent one; when it did not, the package gives you nothing to open, so say which store manages the subscription and render no link. `manageUrl` is `null` for `portal` by design: the portal page is minted by `openPortal()` on web builds.
 
 On a non-web platform, never render a link, URL or call to action pointing at web checkout or the web portal. App Review Guideline 3.1.3(a) restricts steering a customer outside the app to another purchase method, and `manageVia` being the same value on every platform for the same rail is what makes that easy to honour: there is nothing to override per platform, only per rail.
 

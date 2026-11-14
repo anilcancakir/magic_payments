@@ -4,11 +4,11 @@ A Magic app with one page. It boots `PaymentsServiceProvider`, then shows which 
 
 ```bash
 cd example
-flutter create --platforms=web .
+flutter create --empty --platforms=web .
 flutter run -d chrome
 ```
 
-`flutter create` adds the platform folder once; it leaves `lib/` and `pubspec.yaml` as they are.
+`flutter create` adds the platform folder once; it leaves `lib/` and `pubspec.yaml` as they are. `--empty` keeps it from generating a `test/widget_test.dart` that imports a counter app this example does not have.
 
 ## What works without a backend
 

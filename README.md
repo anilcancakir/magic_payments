@@ -58,7 +58,10 @@ Read what the customer is entitled to and send them to the surface that owns the
 ```dart
 import 'package:magic_payments/magic_payments.dart';
 
-Future<void> manageSubscription() async {
+// `openUrl` stands for your app's own URL launcher.
+Future<void> manageSubscription(
+  Future<void> Function(String url) openUrl,
+) async {
   try {
     final BillingEntitlement entitlement = await Payments.currentEntitlement();
 
@@ -66,10 +69,30 @@ Future<void> manageSubscription() async {
 
     switch (entitlement.manageVia) {
       case ManageVia.portal:
-        await Payments.web?.openPortal();
+        final WebBillingService? web = Payments.web;
+
+        if (web != null) {
+          // Web builds only.
+          await web.openPortal();
+        } else {
+          // iOS, Android and desktop have no portal call, and iOS and Android
+          // must not link to the web portal: say where it is managed, no link.
+        }
       case ManageVia.appStore:
       case ManageVia.playStore:
-        await Payments.store?.openStoreManagement();
+        final StoreBillingService? store = Payments.store;
+        final String? manageUrl = entitlement.manageUrl;
+
+        if (store != null) {
+          // iOS and Android builds.
+          await store.openStoreManagement();
+        } else if (manageUrl != null) {
+          // The web app and desktop: `Payments.store` is null there.
+          await openUrl(manageUrl);
+        } else {
+          // Nothing to open: say it is managed in the App Store or Google Play,
+          // without a link.
+        }
       case ManageVia.none:
         break;
     }
@@ -98,7 +121,7 @@ The requests go through magic's `Http` facade to the base URL your app configure
 | The payment rail is down on the backend | `getPaymentMethod()` answers a `PaymentMethod` with every field null. Gate the copy on `PaymentMethod.available`, not on a null `last4`. |
 | A platform that is neither web nor `dart:io` | Every read throws `UnsupportedPlatformException`, never an empty answer. |
 
-`BillingEntitlement.manageVia` is where the subscription is managed (`portal`, `appStore`, `playStore`, `none`), and it follows the rail that sold it, not the platform the app runs on. A subscription bought on a phone is still managed in its store when the customer opens the web app. The backend decides the entitlement; a `true` from a purchase or a returned checkout is a hint, so read `currentEntitlement()` again after any write.
+`BillingEntitlement.manageVia` is where the subscription is managed (`portal`, `appStore`, `playStore`, `none`), and it follows the rail that sold it, not the platform the app runs on. A subscription bought on a phone is still managed in its store when the customer opens the web app, where `Payments.store` is `null`: `openStoreManagement()` exists on iOS and Android builds only, so a store case without the rail uses `BillingEntitlement.manageUrl` when the backend sent one, and otherwise only tells the customer which store manages it. `manageUrl` is `null` for `portal` by design, because `openPortal()` mints a short-lived page on web builds. The backend decides the entitlement; a `true` from a purchase or a returned checkout is a hint, so read `currentEntitlement()` again after any write.
 
 ## Web rail
 
@@ -146,6 +169,10 @@ import 'package:magic_payments/magic_payments.dart';
 Future<void> buy() async {
   final StoreBillingService? store = Payments.store;
   if (store == null) return;
+
+  // The rail cannot see a subscription billed on the web.
+  final BillingEntitlement entitlement = await Payments.currentEntitlement();
+  if (entitlement.manageVia == ManageVia.portal) return;
 
   final bool bought = await store.purchase('pro_annual');
 

@@ -31,7 +31,7 @@ Requires Dart >=3.13, Flutter >=3.47, `magic` ^1.0.0 and a backend that serves `
 
 ## Entitlement rules
 
-1. Branch a management screen on `BillingEntitlement.manageVia` (`portal`, `appStore`, `playStore`, `none`). It follows the rail that sold the subscription.
+1. Branch a management screen on `BillingEntitlement.manageVia` (`portal`, `appStore`, `playStore`, `none`). It follows the rail that sold the subscription, so a store case can reach a web build where `Payments.store` is `null`: use `manageUrl` there when it is set, otherwise tell the customer which store manages it. Never end a store case on `Payments.store?.openStoreManagement()`, which does nothing on that build.
 2. Read `currentEntitlement()` again after any write. The backend's answer is the grant; a `true` from `purchase` or a returned `checkout` only says something happened.
 3. `getPlans()` returns each tier's row undecoded as `Map<String, dynamic>`. The product keys `purchase`, `checkout` and `swap` take are the `key` values in a row's `products` list.
 4. Gate access on `PlanStatus` and not on `subscribed` alone: `trialing`, `pastDue` and `grace` still carry access, and `PlanStatus.isDunning` is `true` for `pastDue` and `grace`.
@@ -76,7 +76,10 @@ Read the entitlement and open the surface that owns it:
 ```dart
 import 'package:magic_payments/magic_payments.dart';
 
-Future<void> manageSubscription() async {
+// `openUrl` stands for your app's own URL launcher.
+Future<void> manageSubscription(
+  Future<void> Function(String url) openUrl,
+) async {
   try {
     final BillingEntitlement entitlement = await Payments.currentEntitlement();
 
@@ -84,10 +87,30 @@ Future<void> manageSubscription() async {
 
     switch (entitlement.manageVia) {
       case ManageVia.portal:
-        await Payments.web?.openPortal();
+        final WebBillingService? web = Payments.web;
+
+        if (web != null) {
+          // Web builds only.
+          await web.openPortal();
+        } else {
+          // iOS, Android and desktop have no portal call, and iOS and Android
+          // must not link to the web portal: say where it is managed, no link.
+        }
       case ManageVia.appStore:
       case ManageVia.playStore:
-        await Payments.store?.openStoreManagement();
+        final StoreBillingService? store = Payments.store;
+        final String? manageUrl = entitlement.manageUrl;
+
+        if (store != null) {
+          // iOS and Android builds.
+          await store.openStoreManagement();
+        } else if (manageUrl != null) {
+          // The web app and desktop: `Payments.store` is null there.
+          await openUrl(manageUrl);
+        } else {
+          // Nothing to open: say it is managed in the App Store or Google Play,
+          // without a link.
+        }
       case ManageVia.none:
         break;
     }
@@ -96,6 +119,8 @@ Future<void> manageSubscription() async {
   }
 }
 ```
+
+`Payments.store?.openStoreManagement()` does nothing on the web app, where `Payments.store` is `null`, so a store case never ends on a null-aware call. `openStoreManagement()` exists on iOS and Android builds only; elsewhere use `manageUrl` when the backend sent one, and otherwise only tell the customer which store manages the subscription. `manageUrl` is `null` for `portal` by design.
 
 Upgrade on the web rail:
 
@@ -136,6 +161,10 @@ Future<String> buy(String productKey) async {
   if (store == null) return 'unavailable';
 
   try {
+    // The rail cannot see a subscription billed on the web (store rule 6).
+    final BillingEntitlement held = await Payments.currentEntitlement();
+    if (held.manageVia == ManageVia.portal) return 'managed on the web';
+
     if (!await store.purchase(productKey)) return 'dismissed';
 
     await Payments.currentEntitlement();

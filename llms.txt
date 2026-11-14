@@ -16,7 +16,10 @@ dart run magic:dowel payments:doctor
 import 'package:magic_payments/magic_payments.dart';
 
 // PaymentsServiceProvider is registered in lib/config/app.dart by plugin:install.
-Future<void> manageSubscription() async {
+// `openUrl` stands for your app's own URL launcher.
+Future<void> manageSubscription(
+  Future<void> Function(String url) openUrl,
+) async {
   try {
     final BillingEntitlement entitlement = await Payments.currentEntitlement();
 
@@ -24,10 +27,30 @@ Future<void> manageSubscription() async {
 
     switch (entitlement.manageVia) {
       case ManageVia.portal:
-        await Payments.web?.openPortal();
+        final WebBillingService? web = Payments.web;
+
+        if (web != null) {
+          // Web builds only.
+          await web.openPortal();
+        } else {
+          // iOS, Android and desktop have no portal call, and iOS and Android
+          // must not link to the web portal: say where it is managed, no link.
+        }
       case ManageVia.appStore:
       case ManageVia.playStore:
-        await Payments.store?.openStoreManagement();
+        final StoreBillingService? store = Payments.store;
+        final String? manageUrl = entitlement.manageUrl;
+
+        if (store != null) {
+          // iOS and Android builds.
+          await store.openStoreManagement();
+        } else if (manageUrl != null) {
+          // The web app and desktop: `Payments.store` is null there.
+          await openUrl(manageUrl);
+        } else {
+          // Nothing to open: say it is managed in the App Store or Google Play,
+          // without a link.
+        }
       case ManageVia.none:
         break;
     }
@@ -61,6 +84,7 @@ Future<void> manageSubscription() async {
 
 - Import only `package:magic_payments/magic_payments.dart`; everything under `src/` is private, and `cli.dart` is for the command line.
 - Check `Payments.web` and `Payments.store` for `null` before rendering a purchase affordance. Never choose a rail or a management screen with `kIsWeb` or `Platform.is*`; branch on `BillingEntitlement.manageVia`.
+- A store `manageVia` can reach a web build, where `Payments.store` is `null` and `Payments.store?.openStoreManagement()` does nothing. `openStoreManagement()` exists on iOS and Android only; elsewhere open `BillingEntitlement.manageUrl` when it is set, otherwise tell the customer which store manages the subscription. `manageUrl` is `null` for `portal`.
 - The backend is the authority. Read `currentEntitlement()` again after `purchase`, `checkout`, `swap` or `cancel`: a store purchase returns `true` before the webhook may have landed.
 - Switch on `BillingException.code`, never on `message`. A dismissed store sheet is `false` from `purchase`, not an exception.
 - Non-null `Payments.store` does not mean configured: a blank or absent `payments.revenuecat.public_sdk_key` throws `BillingErrorCode.notConfigured` at first use. The key is the public one; never put the RevenueCat secret key in the app.

@@ -108,23 +108,60 @@ class _BillingPageState extends State<BillingPage> {
               style: _text,
             ),
             const SizedBox(height: 16),
-            GestureDetector(
-              onTap: _readEntitlement,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                color: _accent,
-                child: const Text(
-                  'Read entitlement',
-                  style: TextStyle(color: Color(0xFFFFFFFF)),
-                ),
-              ),
-            ),
+            _Button(label: 'Read entitlement', onTap: _readEntitlement),
             const SizedBox(height: 16),
             Text(_result, style: _text),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A button that takes focus, activates on Enter and Space, and shows a border
+/// while it is focused, so the page works from the keyboard as well as a tap.
+class _Button extends StatefulWidget {
+  const _Button({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  State<_Button> createState() => _ButtonState();
+}
+
+class _ButtonState extends State<_Button> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return FocusableActionDetector(
+      mouseCursor: SystemMouseCursors.click,
+      onShowFocusHighlight: (bool value) => setState(() => _focused = value),
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (ActivateIntent intent) {
+            widget.onTap();
+
+            return null;
+          },
+        ),
+      },
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: _accent,
+            border: Border.all(
+              color: _focused ? _ink : const Color(0x00000000),
+              width: 2,
+            ),
+          ),
+          child: Text(
+            widget.label,
+            style: const TextStyle(color: Color(0xFFFFFFFF)),
+          ),
         ),
       ),
     );
