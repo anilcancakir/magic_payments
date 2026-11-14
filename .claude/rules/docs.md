@@ -33,8 +33,8 @@ One-sentence lead: what the page is.
 - Put `<a name="kebab-slug"></a>` immediately before every `##` and list the slug in the ToC under the lead.
 - A `basics/` page carries a Gotchas table (Mistake, Fix) of 3 to 6 rows, each verified in `lib/`.
 - Samples use `dart` and `bash` fences, and every symbol in one exists in `lib/`. Commands are `dart run magic:dowel payments:<command>`. Tables are left-aligned (`:-----`) with identifiers in backticks.
-- Links are relative `.md` paths inside `doc/` only; another plugin or core is linked by its `https://anilcancakir.com/<package>/docs/...` URL.
-- No dashes (U+2014, U+2013), no counts and no release-status wording.
+- Links are relative `.md` paths inside `doc/` only; another plugin is linked by its `https://anilcancakir.com/magic/docs/<slug>/...` URL and core by `https://anilcancakir.com/magic/docs/...`.
+- No dashes (U+2014, U+2013), no counts, no release-status wording, and no claim that this package calls Stripe: the web rail talks to your backend.
 
 ## Surface to page
 

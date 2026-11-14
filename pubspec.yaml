@@ -1,7 +1,7 @@
 name: magic_payments
 description: "Subscription billing for Magic apps: one entitlement answer across web checkout and App Store or Play purchases, with no rail logic in your widgets."
 version: 1.0.1
-homepage: https://anilcancakir.com/magic_payments
+homepage: https://anilcancakir.com/magic/payments
 repository: https://github.com/anilcancakir/magic_payments
 issue_tracker: https://github.com/anilcancakir/magic_payments/issues
 

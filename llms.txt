@@ -98,13 +98,13 @@ Future<void> manageSubscription(
 
 ## Docs
 
-- [Installation](https://anilcancakir.com/magic_payments/docs/getting-started/installation.md): add the package, register its provider and config, and see which rail each platform gets.
-- [Configuration](https://anilcancakir.com/magic_payments/docs/getting-started/configuration.md): the `payments.*` keys, the per-platform RevenueCat key, and why the rail is not configured.
-- [Rails](https://anilcancakir.com/magic_payments/docs/basics/rails.md): the three contracts, product keys, typed errors, store identity and entitlement authority.
-- [Drivers](https://anilcancakir.com/magic_payments/docs/basics/drivers.md): the conditional-import factory, the web, io and stub drivers, and overriding one.
-- [CLI Reference](https://anilcancakir.com/magic_payments/docs/basics/cli.md): `payments:install`, `payments:configure` and `payments:doctor`, and the MCP tool.
-- [Payments Manager](https://anilcancakir.com/magic_payments/docs/architecture/payments-manager.md): the singleton behind the facade, the three roles and `extend`.
-- [Service Provider](https://anilcancakir.com/magic_payments/docs/architecture/service-provider.md): what `register()` binds and what `boot()` resolves.
+- [Installation](https://anilcancakir.com/magic/docs/payments/getting-started/installation.md): add the package, register its provider and config, and see which rail each platform gets.
+- [Configuration](https://anilcancakir.com/magic/docs/payments/getting-started/configuration.md): the `payments.*` keys, the per-platform RevenueCat key, and why the rail is not configured.
+- [Rails](https://anilcancakir.com/magic/docs/payments/basics/rails.md): the three contracts, product keys, typed errors, store identity and entitlement authority.
+- [Drivers](https://anilcancakir.com/magic/docs/payments/basics/drivers.md): the conditional-import factory, the web, io and stub drivers, and overriding one.
+- [CLI Reference](https://anilcancakir.com/magic/docs/payments/basics/cli.md): `payments:install`, `payments:configure` and `payments:doctor`, and the MCP tool.
+- [Payments Manager](https://anilcancakir.com/magic/docs/payments/architecture/payments-manager.md): the singleton behind the facade, the three roles and `extend`.
+- [Service Provider](https://anilcancakir.com/magic/docs/payments/architecture/service-provider.md): what `register()` binds and what `boot()` resolves.
 
 ## Links
 
