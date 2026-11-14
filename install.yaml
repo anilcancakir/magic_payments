@@ -47,16 +47,17 @@ post_install:
 
     1. Run `flutter pub get`.
 
-    2. Review lib/config/payments.dart. One key, `driver`, and `platform` is
-       the right value unless you registered your own driver through
-       `Payments.extend(name, factory)`.
+    2. Review lib/config/payments.dart. `driver` stays `platform` unless you
+       registered your own driver through `Payments.extend(role, factory)`. On
+       iOS and Android fill in `revenuecat.public_sdk_key`, RevenueCat's public
+       SDK key; web and desktop builds never read it.
 
     3. Point your app's API at the billing endpoints this package reads:
        GET /billing, /billing/plans, /billing/usage, /billing/invoices,
        /billing/payment-method, and for the web rail POST /billing/checkout,
        /billing/swap, /billing/cancel plus GET /billing/portal.
 
-    4. Verify the install:  dart run <app>:artisan payments:doctor
+    4. Verify the install:  dart run magic:dowel payments:doctor
 
     Note: the provider and main.dart edits are written synchronously by the
     install helpers and are NOT rolled back on a later failure. If install

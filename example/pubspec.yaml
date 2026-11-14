@@ -1,0 +1,20 @@
+name: magic_payments_example
+description: Boots Magic Payments and shows which rails the build serves and what the entitlement read answers.
+publish_to: 'none'
+
+environment:
+  sdk: ">=3.13.0 <4.0.0"
+  flutter: ">=3.47.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  magic: ^1.0.0
+  magic_payments:
+    path: ../
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

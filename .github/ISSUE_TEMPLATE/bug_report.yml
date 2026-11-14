@@ -23,22 +23,22 @@ body:
       description: |
         For example:
         1. Register `PaymentsServiceProvider` in config
-        2. Call `Payments.checkout(plan: 'pro')` on web
-        3. Observe the entitlement after the webhook lands
+        2. Call `Payments.web?.checkout(productKey: 'pro_annual', successUrl: ..., cancelUrl: ...)` on web
+        3. Read `Payments.currentEntitlement()` once your backend's webhook has landed
     validations:
       required: true
 
   - type: textarea
     id: expected
     attributes:
-      label: Expected Behavior
+      label: Expected Behaviour
     validations:
       required: true
 
   - type: textarea
     id: actual
     attributes:
-      label: Actual Behavior
+      label: Actual Behaviour
     validations:
       required: true
 
@@ -48,9 +48,9 @@ body:
       label: Rail
       description: Which billing rail was in use?
       options:
-        - Web (Stripe)
-        - App Store (iOS)
-        - Play Store (Android)
+        - Web rail
+        - Store rail on iOS (App Store)
+        - Store rail on Android (Play)
         - Not rail-specific
     validations:
       required: true
@@ -61,9 +61,9 @@ body:
       label: Module
       options:
         - PaymentsManager (Singleton, resolution)
-        - Contracts (BillingService and the rail contracts)
+        - Contracts (BillingService, WebBillingService, StoreBillingService)
         - Drivers (web, store)
-        - Models (entitlement, plan, receipt)
+        - Models (BillingEntitlement, BillingCheckoutSession, BillingInvoicesPage, Invoice, PaymentMethod, PurchaseContext, StoreProductOffer, UsageStat)
         - Service provider / config
         - CLI (install, configure, doctor)
         - Not sure
@@ -81,7 +81,7 @@ body:
     id: plugin-version
     attributes:
       label: Magic Payments Version
-      placeholder: "0.1.0"
+      placeholder: "1.0.0"
     validations:
       required: true
 
@@ -89,7 +89,7 @@ body:
     id: magic-version
     attributes:
       label: Magic Framework Version
-      placeholder: "0.0.29"
+      placeholder: "1.0.0"
     validations:
       required: true
 
@@ -97,6 +97,6 @@ body:
     id: flutter-version
     attributes:
       label: Flutter Version
-      placeholder: "3.41.0"
+      placeholder: "Flutter 3.47.0 / Dart 3.13.0"
     validations:
       required: true

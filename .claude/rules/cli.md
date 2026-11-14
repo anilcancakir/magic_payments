@@ -74,6 +74,5 @@ declares the same (`dowel/lib/src/installer/dowel_install_command.dart`). Nothin
 `connected`, because no `payments:*` command talks to a running app, and one that wanted to would be
 reading state the backend already owns.
 
-`analysis_options.yaml` sets `avoid_print: ignore` package-wide, under the comment `# CLI tools
-legitimately use print`. The scope is the whole package even though the reason is this directory, so a
-stray `print` outside `lib/src/cli/` is a defect the analyzer will no longer catch for you.
+`analysis_options.yaml` has no `avoid_print` override, so a `print` anywhere in the package, CLI
+directory included, is reported by the analyzer: CLI output goes through the dowel output helpers.

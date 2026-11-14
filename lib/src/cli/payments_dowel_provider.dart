@@ -42,7 +42,7 @@ class MagicPaymentsDowelProvider extends DowelServiceProvider {
       description:
           'Check the Magic Payments installation and configuration of the '
           'project in the current working directory.\n\n'
-          'Runs six checks, each reading one file: the magic_payments '
+          'Runs checks that each read one file: the magic_payments '
           'dependency in pubspec.yaml, its resolution in '
           '.dart_tool/package_config.json, the presence of '
           'lib/config/payments.dart, the payments root and driver value inside '
