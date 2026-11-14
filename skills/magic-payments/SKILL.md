@@ -57,8 +57,8 @@ Requires Dart >=3.13, Flutter >=3.47, `magic` ^1.0.0 and a backend that serves `
 
 ## StoreIdentitySync rules
 
-1. Set `StoreIdentitySync.billableId` (a `String? Function()`) to the paying subject, a user or a team, then call `attach()` once. It identifies the rail on every `Auth.stateNotifier` change; without it `purchase` and `restore` throw `notIdentified`.
-2. After a switch of the paying subject that does not change auth state, `await StoreIdentitySync.syncNow()`. Syncs run one at a time in call order, and the same id twice in a row identifies once.
+1. Set `StoreIdentitySync.billableId` (a `String? Function()`) to the paying subject, a user or a team, call `attach()` once, then `await StoreIdentitySync.syncNow()`, all after `await Magic.init(...)`. `attach()` only adds a listener for later `Auth.stateNotifier` changes, and `Magic.init` already restored a returning user's session, so without the `syncNow()` that user's rail stays unidentified; without `billableId` `purchase` and `restore` throw `notIdentified`.
+2. After a switch of the paying subject that does not change auth state, `await StoreIdentitySync.syncNow()` again. Syncs run one at a time in call order, and the same id twice in a row identifies once.
 3. A `BillingException` from a sync is logged and not thrown, because the login or switch that prompted it already succeeded. Do not call `identify` yourself on top of the sync, and never call `recordBinding`: it is `@internal`.
 
 ## Errors
@@ -67,7 +67,7 @@ Switch on `BillingException.code`, a `BillingErrorCode`, and never on `message`:
 
 ## Command line
 
-`payments:install` (`--dry-run`, `--force`) re-applies the install plan; `payments:configure` (`--show`, `--driver=platform`) edits the one `driver` value; `payments:doctor` (`--verbose`, `--json`) is read only. Only `payments_doctor` is an MCP tool. The doctor reports the store key only as `present`, `absent` or `blank`, a blank key warns and still exits 0, and it cannot say which rails a build serves because that is a compile-time import.
+`payments:install` (`--dry-run`, `--force`) re-applies the install plan; `payments:configure` (`--show`, `--driver=platform`) edits the one `driver` value; `payments:doctor` (`--verbose`, `--json`) is read only. Only `payments_doctor` is an MCP tool. The doctor reports the store key as a state and never its value (`present` in `--json` and `declared` in the human report, otherwise `absent` or `blank`), a blank key warns and still exits 0, and it cannot say which rails a build serves because that is a compile-time import.
 
 ## Recipes
 
@@ -91,7 +91,7 @@ Future<void> manageSubscription() async {
       case ManageVia.none:
         break;
     }
-  } on BillingException {
+  } on BillingException catch (error) {
     // Decide what to tell the customer from `error.code`, never `error.message`.
   }
 }
@@ -125,9 +125,10 @@ Keep the store identified, then buy:
 ```dart
 import 'package:magic_payments/magic_payments.dart';
 
-void wireStore(String? Function() payingId) {
+Future<void> wireStore(String? Function() payingId) async {
   StoreIdentitySync.billableId = payingId;
   StoreIdentitySync.attach();
+  await StoreIdentitySync.syncNow();
 }
 
 Future<String> buy(String productKey) async {

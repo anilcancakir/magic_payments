@@ -150,7 +150,7 @@ if (store != null) {
 }
 ```
 
-Reading `purchase()`'s `true` as an entitlement grant is the bug this contract exists to prevent on the store rail. It is safe on every other call in this package because every other write either confirms synchronously (the web rail's `checkout`, `swap`, `cancel`) or is itself a read; only a store purchase carries this asynchronous gap.
+Reading `purchase()`'s `true` as an entitlement grant is the bug this contract exists to prevent on the store rail. The web rail has the same gap, since its entitlement also follows the vendor's webhook, but it hands back nothing to misread: `checkout` returns a `BillingCheckoutSession`, and `swap` and `cancel` return nothing once the backend has accepted the request. Re-read `currentEntitlement()` after any of them (see [Entitlement Authority](#authority)).
 
 <a name="product-keys"></a>
 ### Product keys, on both rails
@@ -287,6 +287,11 @@ The id passed to `identify()` is what the rail's webhook attributes a purchase t
 StoreIdentitySync.billableId = () => User.current.currentTeam?.id?.toString();
 StoreIdentitySync.attach();
 
+// attach() only adds a listener. `Magic.init` has already restored the
+// session by the time it returns, so a returning user raises no further auth
+// change; identify the restored subject once, explicitly.
+await StoreIdentitySync.syncNow();
+
 // A switch of the paying subject identifies explicitly once it succeeded,
 // because the auth change it causes may still carry the previous subject.
 if (await switchTeam(teamId)) {
@@ -294,7 +299,9 @@ if (await switchTeam(teamId)) {
 }
 ```
 
-- `attach()` listens to `Auth.stateNotifier` and syncs on every change; calling it twice listens once. `detach()` stops listening and forgets what was identified.
+Run the first three calls after `await Magic.init(...)`, which restores the stored session when a user factory is registered. Without the `syncNow()`, a returning user's store rail stays unidentified and `purchase` throws `notIdentified` until the next auth change. The alternative is to call `attach()` from a provider that boots before `AuthServiceProvider` (providers boot in the order of `app.providers`, and the restore bumps `Auth.stateNotifier`), which makes the restore itself trigger the sync.
+
+- `attach()` listens to `Auth.stateNotifier` and syncs on every change after it, without syncing on its own; calling it twice listens once. `detach()` stops listening and forgets what was identified.
 - A build without a store rail, and a session without a subject (`null` or an empty id), identify nothing. A signed-out session unbinds nothing either: the contract has no logout, and the next sign-in overwrites the binding.
 - Syncs run one at a time in call order, and each reads the subject when its turn comes. A switch that lands while an identify is in flight identifies the newer subject after it, never alongside it, so the rail ends on the newer subject whatever order the vendor SDK finishes its calls in.
 - The same id twice in a row identifies once, including two overlapping syncs. The guard resets when the id goes absent, so signing out and back in as the same subject identifies again.
@@ -342,7 +349,7 @@ On a non-web platform, never render a link, URL or call to action pointing at we
 | Granting a feature on the `true` from `purchase()` or on a returned `checkout()` | Re-read `Payments.currentEntitlement()`; a store purchase is asynchronous and the backend's answer is the grant |
 | Choosing a management screen with `kIsWeb` or `Platform.is*` | Branch on `BillingEntitlement.manageVia`; a subscription is managed where its rail sold it |
 | Treating `Payments.store != null` as "the store rail is ready" | It only says the device has a store; a blank `public_sdk_key` throws `BillingErrorCode.notConfigured` at purchase time |
-| Calling `purchase()` before anything identified the paying account | Set `StoreIdentitySync.billableId` and call `attach()`; otherwise the call throws `notIdentified` |
+| Calling `purchase()` before anything identified the paying account | Set `StoreIdentitySync.billableId`, call `attach()`, then `await StoreIdentitySync.syncNow()`; otherwise the call throws `notIdentified` |
 | Switching on `BillingException.message` | Switch on `BillingException.code`; the message is prose that differs per rail |
 | Showing intro-offer copy because `introPrice` is set | Gate it on `introEligible`, which defaults to `false` |
 

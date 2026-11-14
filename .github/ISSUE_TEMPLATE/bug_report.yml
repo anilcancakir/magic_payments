@@ -23,22 +23,22 @@ body:
       description: |
         For example:
         1. Register `PaymentsServiceProvider` in config
-        2. Call `Payments.checkout(plan: 'pro')` on web
-        3. Observe the entitlement after the webhook lands
+        2. Call `Payments.web?.checkout(productKey: 'pro_annual', successUrl: ..., cancelUrl: ...)` on web
+        3. Read `Payments.currentEntitlement()` once your backend's webhook has landed
     validations:
       required: true
 
   - type: textarea
     id: expected
     attributes:
-      label: Expected Behavior
+      label: Expected Behaviour
     validations:
       required: true
 
   - type: textarea
     id: actual
     attributes:
-      label: Actual Behavior
+      label: Actual Behaviour
     validations:
       required: true
 
@@ -48,9 +48,9 @@ body:
       label: Rail
       description: Which billing rail was in use?
       options:
-        - Web (Stripe)
-        - App Store (iOS)
-        - Play Store (Android)
+        - Web rail
+        - Store rail on iOS (App Store)
+        - Store rail on Android (Play)
         - Not rail-specific
     validations:
       required: true
@@ -61,9 +61,9 @@ body:
       label: Module
       options:
         - PaymentsManager (Singleton, resolution)
-        - Contracts (BillingService and the rail contracts)
+        - Contracts (BillingService, WebBillingService, StoreBillingService)
         - Drivers (web, store)
-        - Models (entitlement, plan, receipt)
+        - Models (BillingEntitlement, BillingCheckoutSession, BillingInvoicesPage, Invoice, PaymentMethod, PurchaseContext, StoreProductOffer, UsageStat)
         - Service provider / config
         - CLI (install, configure, doctor)
         - Not sure

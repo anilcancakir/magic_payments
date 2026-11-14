@@ -13,9 +13,10 @@ import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatf
 /// What DOES belong here is credentials, because no import can supply them.
 Map<String, dynamic> get paymentsConfig => {
   'payments': {
-    // Which driver PaymentsManager resolves. `platform` defers to the
-    // conditional-import factory, which is what an app wants unless it
-    // registered a driver of its own through `Payments.extend(name, factory)`.
+    // Read by PaymentsServiceProvider.boot(). `platform` is the only value it
+    // serves: the conditional-import factory picks the driver for this build,
+    // and any other value is logged as an error and ignored. To supply a rail
+    // of your own, register it in code with `Payments.extend(role, factory)`.
     'driver': 'platform',
 
     // The STORE rail's credentials, read by RevenueCatStoreService on iOS and

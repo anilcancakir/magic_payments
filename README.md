@@ -73,7 +73,7 @@ Future<void> manageSubscription() async {
       case ManageVia.none:
         break;
     }
-  } on BillingException {
+  } on BillingException catch (error) {
     // Decide what to tell the customer from `error.code`, never `error.message`.
   }
 }
@@ -186,13 +186,14 @@ The store rail does not refuse a subscription your backend bills on the web, bec
 ```dart
 import 'package:magic_payments/magic_payments.dart';
 
-void wireStore(String? Function() payingId) {
+Future<void> wireStore(String? Function() payingId) async {
   StoreIdentitySync.billableId = payingId;
   StoreIdentitySync.attach();
+  await StoreIdentitySync.syncNow();
 }
 ```
 
-`attach()` identifies on every `Auth.stateNotifier` change. After a switch of the paying subject that does not change auth state, such as a team switch, call `await StoreIdentitySync.syncNow()`. While `billableId` is unset nothing is identified and every store purchase throws `notIdentified`.
+`attach()` only adds a listener: it identifies on every `Auth.stateNotifier` change after the call. `Magic.init` has already restored a returning user's session, so call `wireStore` after `await Magic.init(...)` and let `syncNow()` identify that user; without it the store rail stays unidentified and `purchase` throws `notIdentified` until the next auth change. After a switch of the paying subject that does not change auth state, such as a team switch, call `await StoreIdentitySync.syncNow()` again. While `billableId` is unset nothing is identified and every store purchase throws `notIdentified`.
 
 ## Command line
 
@@ -202,7 +203,7 @@ void wireStore(String? Function() payingId) {
 | `payments:configure` | `--show` prints `driver`; `--driver=platform` sets it. Any other value exits 1. | Yes |
 | `payments:doctor` | Checks the dependency, the config, the provider, the config factory and the store key. `--verbose`, `--json`. | No |
 
-`payments:doctor` reports the store rail's key only as `present`, `absent` or `blank`, never its value, and a blank key warns without failing. It cannot say which rails a build serves, because that is a compile-time import. Only `payments_doctor` is an MCP tool; the two commands that write files are not.
+`payments:doctor` reports the store rail's key as a state and never its value (`present` in `--json` and `declared` in the human report, otherwise `absent` or `blank`), and a blank key warns without failing. It cannot say which rails a build serves, because that is a compile-time import. Only `payments_doctor` is an MCP tool; the two commands that write files are not.
 
 ## For AI coding agents
 
@@ -215,7 +216,7 @@ Rules for an agent writing code against this package. Each one is a mistake that
 | Branch management screens on `BillingEntitlement.manageVia` | A subscription is managed where its rail sold it, whatever platform the app runs on. Never use `kIsWeb` or `Platform.is*`. |
 | Read `currentEntitlement()` again after `purchase`, `checkout`, `swap` or `cancel` | The backend's answer is the grant; the write's own result is only a hint. |
 | Switch on `BillingException.code` | `message` is prose that differs per rail and locale. |
-| Set `StoreIdentitySync.billableId` and call `attach()` before any store purchase | Without a paying subject `purchase` and `restore` throw `notIdentified`. |
+| Set `StoreIdentitySync.billableId`, call `attach()`, then `await StoreIdentitySync.syncNow()` before any store purchase | Without a paying subject `purchase` and `restore` throw `notIdentified`. |
 | Never put a RevenueCat secret key in `lib/config/payments.dart` | `public_sdk_key` is the public key and ships in the app bundle. |
 | Never render a link to web checkout or the web portal on iOS or Android | App Review Guideline 3.1.3(a) restricts steering a customer to another purchase method. |
 | Show intro-offer copy only when `StoreProductOffer.introEligible` is `true` | An `introPrice` alone says the product has an offer, not that this customer may take it. |

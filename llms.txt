@@ -31,7 +31,7 @@ Future<void> manageSubscription() async {
       case ManageVia.none:
         break;
     }
-  } on BillingException {
+  } on BillingException catch (error) {
     // Decide what to tell the customer from `error.code`, never `error.message`.
   }
 }
@@ -47,7 +47,7 @@ Future<void> manageSubscription() async {
 - `BillingService` (the five reads), `WebBillingService` (`checkout`, `swap`, `cancel`, `openPortal`), `StoreBillingService` (`identify`, `purchase`, `products`, `restore`, `openStoreManagement`, `store`, `lastChangeTiming`): three unrelated contracts, none extends another.
 - `BillingEntitlement`: `plan`, `planStatus`, `subscribed`, `manageVia`, `manageUrl`, `currentPeriodEnd`, `trialEndsAt`, `gracePeriodEndsAt`, `productKey`, `owned`, `balances`, `allowances`, `raw` and more. Enums: `PlanStatus`, `ManageVia`, `BillingProvider`, `BillingCycle`, `ProductType`, `StoreChangeTiming`, `InvoiceStatus`, `BillingErrorCode`.
 - `BillingException` (`message`, `code`) and `UnsupportedPlatformException`.
-- `StoreIdentitySync`: `billableId` (your resolver), `attach()`, `detach()`, `syncNow()`. It keeps the store rail bound to the paying account.
+- `StoreIdentitySync`: `billableId` (your resolver), `attach()`, `detach()`, `syncNow()`. It keeps the store rail bound to the paying account. `attach()` only adds a listener; `syncNow()` identifies the current user.
 - `payments:install` (`--dry-run`, `--force`), `payments:configure` (`--show`, `--driver=platform`), `payments:doctor` (`--verbose`, `--json`) in `package:magic_payments/cli.dart` (`MagicPaymentsDowelProvider`). Only `payments_doctor` is an MCP tool.
 
 ## Platforms
@@ -64,12 +64,12 @@ Future<void> manageSubscription() async {
 - The backend is the authority. Read `currentEntitlement()` again after `purchase`, `checkout`, `swap` or `cancel`: a store purchase returns `true` before the webhook may have landed.
 - Switch on `BillingException.code`, never on `message`. A dismissed store sheet is `false` from `purchase`, not an exception.
 - Non-null `Payments.store` does not mean configured: a blank or absent `payments.revenuecat.public_sdk_key` throws `BillingErrorCode.notConfigured` at first use. The key is the public one; never put the RevenueCat secret key in the app.
-- Set `StoreIdentitySync.billableId` and call `attach()` before a store purchase. Unset, `purchase` and `restore` throw `notIdentified`; a rail bound to another account throws `identityMismatch`; a subscription held in the other store throws `managedElsewhere`.
+- Set `StoreIdentitySync.billableId`, call `attach()`, then `await StoreIdentitySync.syncNow()` after `await Magic.init(...)` and before a store purchase: `Magic.init` already restored a returning user's session, and `attach()` alone identifies only later auth changes. Unset, `purchase` and `restore` throw `notIdentified`; a rail bound to another account throws `identityMismatch`; a subscription held in the other store throws `managedElsewhere`.
 - The store rail does not see a subscription billed on the web. Gate a store purchase on `entitlement.manageVia != ManageVia.portal`, and on iOS and Android never link to web checkout or the portal (App Review Guideline 3.1.3(a)).
 - `payments.driver` accepts `platform` only; `payments:configure --driver=x` exits 1. Register your own rail in code with `Payments.extend(PaymentsManager.storeRole, () => MyRail())`.
 - A web write refused with 422 `product_not_sellable` is `productUnavailable`; a 402 with `payment_failed` or `payment_requires_action` is `paymentDeclined` or `paymentRequiresAction`, and nothing changed.
 - `getPaymentMethod()` reports a rail outage as a `PaymentMethod` with every field null: gate on `available`, not on a null `last4`. Show intro copy only when `StoreProductOffer.introEligible` is `true`.
-- `payments:doctor` cannot say which rails a build serves, because that is a compile-time import; a blank store key warns and still exits 0.
+- `payments:doctor` cannot say which rails a build serves, because that is a compile-time import. It reports the store key as a state and never its value (`present` in `--json` and `declared` in the human report, otherwise `absent` or `blank`); a blank key warns and still exits 0.
 - In tests call `Payments.forgetDrivers()` in `tearDown`: the manager is a `static final` that outlives a container reset.
 
 ## Docs
