@@ -4,7 +4,7 @@
 
 Subscription billing for the Magic Framework: the `Payments` facade over `PaymentsManager`, three unrelated contracts (`BillingService` reads, `WebBillingService`, `StoreBillingService`), the RevenueCat store rail, `StoreIdentitySync` and the `payments:*` commands on dowel. The backend decides the entitlement and owns the payment vendor. The rail that sold a subscription and the platform the app runs on are different axes, so nothing here branches on `kIsWeb` or `Platform.is*` to decide where a subscription is managed.
 
-**Version:** 1.0.1 · **Dart:** >=3.13.0 · **Flutter:** >=3.47.0 · **Requires:** `magic` ^1.0.0, `dowel` ^1.0.0, `purchases_flutter` ^11.0.2
+**Version:** 1.0.2 · **Dart:** >=3.13.0 · **Flutter:** >=3.47.0 · **Requires:** `magic` ^1.0.0, `dowel` ^1.0.0, `purchases_flutter` ^11.0.2
 
 ## Commands
 
