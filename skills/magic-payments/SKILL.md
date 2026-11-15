@@ -1,7 +1,7 @@
 ---
 name: magic-payments
 description: "Read the entitlement and run web or store purchases in a Magic app with the Payments facade and its two rails."
-version: 1.0.1
+version: 1.0.2
 when_to_use: "Use when code imports package:magic_payments or touches Payments, WebBillingService, StoreBillingService, StoreIdentitySync or BillingException."
 ---
 

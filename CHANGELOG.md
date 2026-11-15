@@ -2,9 +2,11 @@
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-15
+
 ### Changed
 
-- **The package page is `https://anilcancakir.com/magic/payments` and every documentation link sits under `https://anilcancakir.com/magic/docs/payments`.** The pub.dev page carries it from the next release. (`pubspec.yaml`, `README.md`, `llms.txt`)
+- **The package page is `https://anilcancakir.com/magic/payments` and every documentation link sits under `https://anilcancakir.com/magic/docs/payments`.** (`pubspec.yaml`, `README.md`, `llms.txt`)
 
 ### Fixed
 
