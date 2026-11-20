@@ -12,10 +12,6 @@ topics:
   - magic-framework
   - flutter-plugin
 
-screenshots:
-  - description: "The Magic Payments logo."
-    path: screenshots/logo.png
-
 # Inherited from `magic`, not chosen here: magic 1.0.0 declares
 # `sdk: ">=3.13.0 <4.0.0"` and `flutter: ">=3.47.0"`, and a package cannot
 # resolve below its own dependency's floor. Copying the older block from a

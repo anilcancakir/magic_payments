@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/anilcancakir/magic_payments/master/screenshots/logo.png" width="120" alt="Magic Payments logo" />
+  <img src="https://raw.githubusercontent.com/anilcancakir/magic_payments/master/.github/logo.png" width="120" alt="Magic Payments logo" />
 </p>
 
 <h1 align="center">Magic Payments</h1>
